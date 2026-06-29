@@ -522,13 +522,14 @@ export function AppointmentsCalendarBoard({ currentUser, staffMembers }: Props) 
                     </div>
                     {visibleStaffMembers.map((staff, staffIndex) => {
                       const isCovered = hasScheduleCoverage(staff.id, slot);
-                      const isDropTarget =
-                        Boolean(draggingAppointment) &&
+                      const draggingDuration = draggingAppointment?.duration;
+                      const canDropOnSlot =
+                        draggingAppointment &&
                         draggingAppointment.staffId === staff.id &&
-                        Boolean(
-                          draggingAppointment.duration &&
-                            getMatchingSchedule(staff.id, slot, draggingAppointment.duration),
-                        ) &&
+                        draggingDuration &&
+                        getMatchingSchedule(staff.id, slot, draggingDuration);
+                      const isDropTarget =
+                        Boolean(canDropOnSlot) &&
                         !isPending;
 
                       return (
