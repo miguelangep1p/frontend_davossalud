@@ -118,6 +118,13 @@ export function AppointmentForm({
   const durationStr = form.watch("duration");
   const selectedStartTime = form.watch("startTime");
   const selectedScheduleId = form.watch("scheduleId");
+  const specialists = useMemo(() => {
+    const doctors = staffMembers.filter((staff) =>
+      staff.user.roles.includes(Role.DOCTOR),
+    );
+
+    return doctors.length > 0 ? doctors : staffMembers;
+  }, [staffMembers]);
 
   useEffect(() => {
     async function loadAvailability() {
@@ -289,13 +296,11 @@ export function AppointmentForm({
                     <SelectValue placeholder="Seleccione especialista" />
                   </SelectTrigger>
                   <SelectContent>
-                    {staffMembers
-                      .filter((staff) => staff.user.roles.includes(Role.DOCTOR))
-                      .map((staff) => (
+                    {specialists.map((staff) => (
                         <SelectItem key={staff.id} value={staff.id}>
                           {staff.user.firstName} {staff.user.lastName}
                         </SelectItem>
-                      ))}
+                    ))}
                   </SelectContent>
                 </Select>
                 {fieldState.invalid ? (

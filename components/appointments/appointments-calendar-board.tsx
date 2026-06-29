@@ -77,24 +77,26 @@ interface Props {
 }
 
 export function AppointmentsCalendarBoard({ currentUser, staffMembers }: Props) {
+  const doctors = useMemo(() => {
+    const staffWithDoctorRole = staffMembers.filter((staff) =>
+      staff.user.roles.includes(Role.DOCTOR),
+    );
+
+    return staffWithDoctorRole.length > 0 ? staffWithDoctorRole : staffMembers;
+  }, [staffMembers]);
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().slice(0, 10),
   );
   const [selectedStaffId, setSelectedStaffId] = useState(
     currentUser?.roles.includes(Role.DOCTOR)
       ? currentUser.staff?.id || ""
-      : staffMembers.find((staff) => staff.user.roles.includes(Role.DOCTOR))?.id || "",
+      : doctors[0]?.id || "",
   );
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [draggingAppointmentId, setDraggingAppointmentId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  const doctors = useMemo(
-    () => staffMembers.filter((staff) => staff.user.roles.includes(Role.DOCTOR)),
-    [staffMembers],
-  );
 
   useEffect(() => {
     async function loadCalendarData() {
@@ -131,6 +133,12 @@ export function AppointmentsCalendarBoard({ currentUser, staffMembers }: Props) 
 
     void loadCalendarData();
   }, [selectedDate, selectedStaffId]);
+
+  useEffect(() => {
+    if (!selectedStaffId && doctors.length > 0) {
+      setSelectedStaffId(doctors[0].id);
+    }
+  }, [doctors, selectedStaffId]);
 
   const scheduledAppointments = appointments.filter(
     (appointment) =>

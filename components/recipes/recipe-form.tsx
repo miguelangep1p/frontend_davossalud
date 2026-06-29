@@ -88,6 +88,7 @@ export function RecipeForm({
   const doctors = staffMembers.filter((item) =>
     item.user?.roles?.includes(Role.DOCTOR),
   );
+  const specialists = doctors.length > 0 ? doctors : staffMembers;
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -158,7 +159,7 @@ export function RecipeForm({
                     <SelectValue placeholder="Seleccione el médico" />
                   </SelectTrigger>
                   <SelectContent>
-                    {doctors.map((doctor) => (
+                    {specialists.map((doctor) => (
                       <SelectItem key={doctor.id} value={doctor.id}>
                         {doctor.user.firstName} {doctor.user.lastName}
                         {doctor.specialty ? ` · ${doctor.specialty}` : ""}
