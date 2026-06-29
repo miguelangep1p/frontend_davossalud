@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   MoreHorizontal,
   Loader2,
@@ -41,11 +41,29 @@ import {
   updateScheduleAction,
 } from "@/lib/actions/schedule.actions";
 
+const SCHEDULE_COLOR_OPTIONS = [
+  "#F472B6",
+  "#60A5FA",
+  "#34D399",
+  "#F59E0B",
+  "#A78BFA",
+  "#F87171",
+  "#06B6D4",
+  "#84CC16",
+];
+
 export function ScheduleTableActions({ schedule }: { schedule: Schedule }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState(schedule.color || "#F472B6");
+
+  useEffect(() => {
+    if (editOpen) {
+      setSelectedColor(schedule.color || "#F472B6");
+    }
+  }, [editOpen, schedule.color]);
 
   async function handleDelete() {
     setIsLoading(true);
@@ -73,11 +91,11 @@ export function ScheduleTableActions({ schedule }: { schedule: Schedule }) {
     const date = formData.get("date") as string;
     const startTime = formData.get("startTime") as string;
     const endTime = formData.get("endTime") as string;
-
     const dataToUpdate = {
       date,
       startTime,
       endTime,
+      color: selectedColor,
     };
 
     try {
@@ -183,6 +201,43 @@ export function ScheduleTableActions({ schedule }: { schedule: Schedule }) {
                   required
                   className="col-span-3 ml-2"
                 />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="color-edit" className="text-right font-medium">
+                  Color
+                </Label>
+                <div className="col-span-3 ml-2 space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {SCHEDULE_COLOR_OPTIONS.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        aria-label={`Seleccionar color ${color}`}
+                        onClick={() => setSelectedColor(color)}
+                        className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-105 ${
+                          selectedColor === color
+                            ? "border-foreground ring-2 ring-rose-200"
+                            : "border-border"
+                        }`}
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      id="color-edit"
+                      name="color"
+                      type="color"
+                      value={selectedColor}
+                      onChange={(event) => setSelectedColor(event.target.value)}
+                      required
+                      className="h-10 w-16 p-1"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      Color del turno en el calendario
+                    </span>
+                  </div>
+                </div>
               </div>
               {error && (
                 <p className="text-sm text-red-500 text-center col-span-4 font-medium px-4">

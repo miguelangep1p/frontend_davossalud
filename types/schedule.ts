@@ -5,6 +5,7 @@ export interface Schedule {
   date: string;
   startTime: string;
   endTime: string;
+  color: string;
   staffId: string;
   staff?: Staff;
   createdAt: string;
@@ -16,6 +17,7 @@ export interface CreateScheduleDto {
   date: string;
   startTime: string;
   endTime: string;
+  color: string;
 }
 
 export interface UpdateScheduleDto extends Partial<CreateScheduleDto> {}

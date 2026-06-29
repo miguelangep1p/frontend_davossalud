@@ -49,7 +49,7 @@ export async function deleteScheduleAction(id: string, staffId: string) {
   }
 }
 
-export async function getSchedulesByStaffIdAction(staffId: string, date?: string) {
+export async function getSchedulesByStaffIdAction(staffId?: string, date?: string) {
   try {
     const token = await getSession()
     if (!token) throw new Error("No hay sesión activa")

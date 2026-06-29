@@ -41,6 +41,7 @@ export function ScheduleTable({ data }: ScheduleTableProps) {
             <TableHead className="font-semibold ">Fecha</TableHead>
             <TableHead className="font-semibold ">Hora Inicio</TableHead>
             <TableHead className="font-semibold ">Hora Fin</TableHead>
+            <TableHead className="font-semibold ">Color</TableHead>
             <TableHead className="text-right font-semibold">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -55,6 +56,17 @@ export function ScheduleTable({ data }: ScheduleTableProps) {
               </TableCell>
               <TableCell>{schedule.startTime}</TableCell>
               <TableCell>{schedule.endTime}</TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="h-4 w-4 rounded-full border border-border"
+                    style={{ backgroundColor: schedule.color }}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {schedule.color}
+                  </span>
+                </div>
+              </TableCell>
               <TableCell className="text-right">
                 <ScheduleTableActions schedule={schedule} />
               </TableCell>

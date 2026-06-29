@@ -2,9 +2,11 @@ import { Schedule } from "@/types/schedule"
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
-export async function getSchedulesByStaffId(staffId: string, token: string, date?: string): Promise<Schedule[]> {
-  let url = `${BASE_URL}/schedules?staffId=${staffId}`
-  if (date) url += `&date=${date}`
+export async function getSchedulesByStaffId(staffId: string | undefined, token: string, date?: string): Promise<Schedule[]> {
+  const urlParams = new URLSearchParams()
+  if (staffId) urlParams.append("staffId", staffId)
+  if (date) urlParams.append("date", date)
+  const url = `${BASE_URL}/schedules${urlParams.toString() ? `?${urlParams.toString()}` : ""}`
   
   const response = await fetch(url, {
     headers: {
