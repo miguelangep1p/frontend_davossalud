@@ -40,6 +40,7 @@ import {
   deleteScheduleAction,
   updateScheduleAction,
 } from "@/lib/actions/schedule.actions";
+import { toast } from "sonner";
 
 const SCHEDULE_COLOR_OPTIONS = [
   "#F472B6",
@@ -74,9 +75,12 @@ export function ScheduleTableActions({ schedule }: { schedule: Schedule }) {
       if (!result.success) {
         throw new Error(result.error);
       }
+      toast.success("Turno eliminado correctamente");
       setDeleteOpen(false);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al eliminar");
+      const message = err instanceof Error ? err.message : "Error al eliminar";
+      setError(message);
+      toast.error("No se pudo eliminar el turno", { description: message });
     } finally {
       setIsLoading(false);
     }
@@ -91,6 +95,14 @@ export function ScheduleTableActions({ schedule }: { schedule: Schedule }) {
     const date = formData.get("date") as string;
     const startTime = formData.get("startTime") as string;
     const endTime = formData.get("endTime") as string;
+
+    if (endTime <= startTime) {
+      const message = "La hora de fin debe ser posterior a la hora de inicio";
+      setError(message);
+      toast.error("Revisa el horario", { description: message });
+      setIsLoading(false);
+      return;
+    }
     const dataToUpdate = {
       date,
       startTime,
@@ -107,9 +119,12 @@ export function ScheduleTableActions({ schedule }: { schedule: Schedule }) {
       if (!result.success) {
         throw new Error(result.error);
       }
+      toast.success("Turno actualizado correctamente");
       setEditOpen(false);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al actualizar");
+      const message = err instanceof Error ? err.message : "Error al actualizar";
+      setError(message);
+      toast.error("No se pudo actualizar el turno", { description: message });
     } finally {
       setIsLoading(false);
     }

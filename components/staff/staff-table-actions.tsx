@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 interface StaffRowActionsProps {
   staff: Staff;
@@ -65,9 +66,12 @@ export function StaffTableActions({ staff }: StaffRowActionsProps) {
     setError(null);
     try {
       await deleteStaffAction(staff.id);
+      toast.success("Personal eliminado correctamente");
       setDeleteOpen(false);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "No se pudo eliminar el personal";
+      setError(message);
+      toast.error("No se pudo eliminar el personal", { description: message });
     } finally {
       setIsLoading(false);
     }
@@ -83,6 +87,14 @@ export function StaffTableActions({ staff }: StaffRowActionsProps) {
     const address = formData.get("address") as string;
     const specialty = formData.get("specialty") as string;
 
+    if (phone && !/^\d{9}$/.test(phone)) {
+      const message = "El teléfono debe contener exactamente 9 dígitos";
+      setError(message);
+      toast.error("Revisa los datos ingresados", { description: message });
+      setIsLoading(false);
+      return;
+    }
+
     const dataToUpdate = {
       phone,
       address,
@@ -91,9 +103,12 @@ export function StaffTableActions({ staff }: StaffRowActionsProps) {
 
     try {
       await updateStaffAction(staff.id, dataToUpdate);
+      toast.success("Personal actualizado correctamente");
       setEditOpen(false);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "No se pudo actualizar el personal";
+      setError(message);
+      toast.error("No se pudo actualizar el personal", { description: message });
     } finally {
       setIsLoading(false);
     }

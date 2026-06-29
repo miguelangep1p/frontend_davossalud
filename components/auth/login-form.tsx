@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { login } from '@/lib/actions/auth.actions'
 import { SystemBrand } from '@/components/brand/system-brand'
+import { toast } from 'sonner'
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'No se pudo iniciar sesión'
@@ -23,14 +24,27 @@ export function LoginForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setLoading(true)
     setError('')
+
+    if (!email.trim()) {
+      toast.error('Escribe tu correo electrónico')
+      return
+    }
+
+    if (!password) {
+      toast.error('Escribe tu contraseña')
+      return
+    }
+
+    setLoading(true)
 
     try {
       await login({ email, password })
       router.push('/dashboard')
     } catch (err: unknown) {
-      setError(getErrorMessage(err))
+      const message = getErrorMessage(err)
+      setError(message)
+      toast.error('No se pudo iniciar sesión', { description: message })
     } finally {
       setLoading(false)
     }

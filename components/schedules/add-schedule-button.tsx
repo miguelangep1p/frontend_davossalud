@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createScheduleAction } from "@/lib/actions/schedule.actions";
+import { toast } from "sonner";
 
 const SCHEDULE_COLOR_OPTIONS = [
   "#F472B6",
@@ -42,6 +43,14 @@ export function AddScheduleButton({ staffId }: { staffId: string }) {
     const date = formData.get("date") as string;
     const startTime = formData.get("startTime") as string;
     const endTime = formData.get("endTime") as string;
+
+    if (endTime <= startTime) {
+      const message = "La hora de fin debe ser posterior a la hora de inicio";
+      setError(message);
+      toast.error("Revisa el horario", { description: message });
+      setIsLoading(false);
+      return;
+    }
     const dataToCreate = {
       staffId,
       date,
@@ -55,9 +64,12 @@ export function AddScheduleButton({ staffId }: { staffId: string }) {
       if (!result.success) {
         throw new Error(result.error);
       }
+      toast.success("Turno registrado correctamente");
       setOpen(false);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "No se pudo registrar el turno";
+      setError(message);
+      toast.error("No se pudo registrar el turno", { description: message });
     } finally {
       setIsLoading(false);
     }

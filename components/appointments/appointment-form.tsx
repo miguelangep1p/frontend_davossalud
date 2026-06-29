@@ -5,6 +5,7 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { showFormErrors } from "@/lib/form-notifications";
 import * as z from "zod";
 import { createAppointmentAction, getAppointmentsListAction } from "@/lib/actions/appointment.actions";
 import { getSchedulesByStaffIdAction } from "@/lib/actions/schedule.actions";
@@ -257,7 +258,7 @@ export function AppointmentForm({
   const durationOptions = Array.from({ length: 8 }, (_, index) => (index + 1) * 30);
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={form.handleSubmit(onSubmit, showFormErrors)} className="space-y-6">
       <FieldGroup>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Controller

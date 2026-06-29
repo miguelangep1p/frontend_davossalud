@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { createPatientAction, updatePatientAction } from "@/lib/actions/patient.actions";
 import { BloodType, Gender, Patient } from "@/types/patient";
+import { showFormErrors } from "@/lib/form-notifications";
 
 const formSchema = z.object({
   firstName: z.string().min(1, "El nombre es requerido"),
@@ -27,12 +28,14 @@ const formSchema = z.object({
   document: z.string().min(5, "El documento debe tener al menos 5 caracteres"),
   birthDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato inválido (YYYY-MM-DD)"),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato inválido (YYYY-MM-DD)")
+    .refine((value) => value <= new Date().toISOString().slice(0, 10), {
+      message: "La fecha de nacimiento no puede ser futura",
+    }),
   gender: z.enum(Gender),
   phone: z
     .string()
-    .min(7, "El teléfono debe tener al menos 7 números")
-    .max(15, "El teléfono es muy largo"),
+    .regex(/^\d{7,15}$/, "El teléfono debe contener entre 7 y 15 dígitos"),
   address: z.string().optional().or(z.literal("")),
   profilePhoto: z.string().optional().or(z.literal("")),
   additionalNote: z.string().optional().or(z.literal("")),
@@ -101,7 +104,7 @@ export function PatientForm({ patient, onSuccess }: PatientFormProps) {
   const initials = `${form.watch("firstName")?.[0] || ""}${form.watch("lastName")?.[0] || ""}`.trim() || "PT";
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={form.handleSubmit(onSubmit, showFormErrors)} className="space-y-6">
       <div className="space-y-4">
         <h3 className="border-b pb-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Información personal
@@ -173,7 +176,12 @@ export function PatientForm({ patient, onSuccess }: PatientFormProps) {
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor={field.name}>Fecha de nacimiento</FieldLabel>
-                  <Input {...field} id={field.name} type="date" />
+                  <Input
+                    {...field}
+                    id={field.name}
+                    type="date"
+                    max={new Date().toISOString().slice(0, 10)}
+                  />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </Field>
               )}
@@ -206,10 +214,10 @@ export function PatientForm({ patient, onSuccess }: PatientFormProps) {
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={field.name}>Grupo sanguíneo</FieldLabel>
+                  <FieldLabel htmlFor={field.name}>Grupo sanguíneo (opcional)</FieldLabel>
                   <Select onValueChange={field.onChange} value={field.value || ""}>
                     <SelectTrigger id={field.name}>
-                      <SelectValue placeholder="Seleccione" />
+                      <SelectValue placeholder="No especificado" />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.values(BloodType).map((type) => (
@@ -232,7 +240,12 @@ export function PatientForm({ patient, onSuccess }: PatientFormProps) {
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor={field.name}>Teléfono</FieldLabel>
-                  <Input {...field} id={field.name} placeholder="987654321" />
+                  <Input
+                    {...field}
+                    id={field.name}
+                    inputMode="numeric"
+                    placeholder="987654321"
+                  />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </Field>
               )}

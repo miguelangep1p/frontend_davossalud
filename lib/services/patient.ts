@@ -2,6 +2,20 @@ import { Patient, CreatePatientDto, UpdatePatientDto } from "@/types/patient";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
+async function getApiError(response: Response, fallback: string): Promise<string> {
+  const error = await response.json().catch(() => null);
+
+  if (Array.isArray(error?.errors) && error.errors.length > 0) {
+    return error.errors.join(". ");
+  }
+
+  if (Array.isArray(error?.message)) {
+    return error.message.join(". ");
+  }
+
+  return typeof error?.message === "string" ? error.message : fallback;
+}
+
 export async function getPatientsList(token: string): Promise<Patient[]> {
   const response = await fetch(`${BASE_URL}/patients`, {
     headers: {
@@ -76,8 +90,7 @@ export async function createPatient(data: CreatePatientDto, token: string): Prom
   if (response.status === 403) throw new Error("No tienes permisos para crear pacientes");
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Error al crear el paciente");
+    throw new Error(await getApiError(response, "Error al crear el paciente"));
   }
 
   return response.json();
@@ -97,8 +110,9 @@ export async function updatePatient(id: string, data: UpdatePatientDto, token: s
   if (response.status === 403) throw new Error("No tienes permisos para actualizar este paciente");
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || `Error al actualizar el paciente con ID ${id}`);
+    throw new Error(
+      await getApiError(response, `Error al actualizar el paciente con ID ${id}`),
+    );
   }
 
   return response.json();

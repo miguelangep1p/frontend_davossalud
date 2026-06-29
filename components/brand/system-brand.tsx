@@ -8,18 +8,18 @@ type Props = {
 
 export function SystemBrand({ compact = false, href = "/dashboard" }: Props) {
   const content = (
-    <div className="flex items-center gap-3">
-      <div className="flex size-11 items-center justify-center rounded-2xl border border-rose-100/80 bg-white shadow-[0_16px_40px_rgba(190,24,93,0.14)]">
+    <div className="flex min-w-0 items-center gap-3">
+      <div className="flex h-12 w-14 shrink-0 items-center justify-center overflow-hidden bg-white">
         <Image
-          src="/davos-salud-logo-transparent.png"
+          src="/davos-salud-logo.jpeg"
           alt="Davos Salud"
-          width={44}
+          width={56}
           height={44}
-          className="size-9 object-contain"
+          className="h-11 w-14 object-cover"
           priority
         />
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 group-data-[collapsible=icon]:hidden">
         <p className="truncate text-sm font-semibold uppercase tracking-[0.24em] text-rose-700">
           Davos Salud
         </p>

@@ -14,9 +14,9 @@ export default async function PlatformLayout({
   return (
     <SidebarProvider>
       <AppSidebar user={user} />
-      <main className="flex-1 w-full relative bg-background min-h-screen">
-        <div className="p-4 flex items-center gap-4 ">
-          <SidebarTrigger />
+      <main className="relative min-h-screen w-full flex-1 bg-[radial-gradient(circle_at_top_right,rgba(244,114,182,0.08),transparent_28%),hsl(var(--background))]">
+        <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-border/60 bg-background/85 px-4 py-3 backdrop-blur-xl">
+          <SidebarTrigger className="rounded-xl border bg-card shadow-sm" />
           <AppBreadcrumb />
         </div>
         {children}

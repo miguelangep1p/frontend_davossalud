@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { showFormErrors } from "@/lib/form-notifications";
 
 const itemSchema = z.object({
   medicine: z.string().min(1, "Medicamento requerido"),
@@ -119,7 +120,7 @@ export function RecipeForm({
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={form.handleSubmit(onSubmit, showFormErrors)} className="space-y-6">
       <Card className="border-dashed">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Paso 1. Datos clínicos</CardTitle>

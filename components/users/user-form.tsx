@@ -26,6 +26,7 @@ import {
 import { createUserAction, updateUserAction } from "@/lib/actions/user.actions";
 import { Role, User } from "@/types/user";
 import { Switch } from "@/components/ui/switch";
+import { showFormErrors } from "@/lib/form-notifications";
 
 const formSchema = z.object({
   firstName: z.string().min(1, "El nombre es requerido"),
@@ -84,7 +85,7 @@ export function UserForm({ initialData, onSuccess }: UserFormProps) {
   }
 
   return (
-    <form id="user-registration-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <form id="user-registration-form" onSubmit={form.handleSubmit(onSubmit, showFormErrors)} className="space-y-6">
       <FieldGroup>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Controller

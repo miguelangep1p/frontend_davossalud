@@ -5,6 +5,7 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
+import { showFormErrors } from "@/lib/form-notifications";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -85,7 +86,7 @@ export function TreatmentForm({ treatment, onSuccess }: TreatmentFormProps) {
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={form.handleSubmit(onSubmit, showFormErrors)} className="space-y-6">
       <FieldGroup>
         <Controller
           name="name"

@@ -25,6 +25,7 @@ import {
 import { createStaffAction } from "@/lib/actions/staff.actions";
 import { getUsersAction } from "@/lib/actions/user.actions";
 import { User } from "@/types/auth";
+import { showFormErrors } from "@/lib/form-notifications";
 
 const formSchema = z.object({
   userId: z.string().min(1, "El usuario es requerido"),
@@ -96,7 +97,7 @@ export function StaffForm({ onSuccess }: StaffFormProps) {
   return (
     <form
       id="staff-registration-form"
-      onSubmit={form.handleSubmit(onSubmit)}
+      onSubmit={form.handleSubmit(onSubmit, showFormErrors)}
       className="space-y-6"
     >
       <FieldGroup>

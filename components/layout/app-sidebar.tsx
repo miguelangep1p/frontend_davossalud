@@ -117,7 +117,7 @@ export function AppSidebar({ user }: { user?: User | null }) {
       <SidebarHeader className="border-b border-sidebar-border/70 px-2 pb-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <div className="rounded-2xl border border-rose-100/80 bg-white px-3 py-3 shadow-sm">
+            <div className="overflow-hidden rounded-xl bg-white px-2 py-2 group-data-[collapsible=icon]:p-0">
               <SystemBrand compact />
             </div>
           </SidebarMenuItem>

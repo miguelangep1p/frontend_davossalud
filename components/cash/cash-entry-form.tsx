@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { createCashEntryAction, updateCashEntryAction } from "@/lib/actions/cash.actions";
 import { CashEntry, CashEntryType, CashPaymentMethod } from "@/types/cash";
+import { showFormErrors } from "@/lib/form-notifications";
 
 const schema = z.object({
   type: z.enum([CashEntryType.INCOME, CashEntryType.EXPENSE]),
@@ -93,7 +94,7 @@ export function CashEntryForm({ entry, onSuccess }: Props) {
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+    <form onSubmit={form.handleSubmit(onSubmit, showFormErrors)} className="space-y-5">
       <FieldGroup>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Tipo */}

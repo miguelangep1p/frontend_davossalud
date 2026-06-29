@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { showFormErrors } from "@/lib/form-notifications";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +34,12 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Ocurrió un error inesperado.";
 }
 
+const optionalNumber = (minimum: number, maximum: number, message: string) =>
+  z.preprocess(
+    (value) => (value === "" || value === undefined ? undefined : value),
+    z.coerce.number().min(minimum, message).max(maximum, message).optional(),
+  );
+
 const schema = z.object({
   patientId: z.string().uuid("ID de paciente invalido"),
   staffId: z.string().uuid("ID de especialista invalido"),
@@ -45,11 +52,11 @@ const schema = z.object({
   treatment: z.string().optional(),
   observations: z.string().optional(),
   imageUrls: z.array(z.string()).optional(),
-  weight: z.coerce.number().min(0).max(500).optional(),
-  height: z.coerce.number().min(0).max(300).optional(),
+  weight: optionalNumber(0, 500, "El peso debe estar entre 0 y 500 kg"),
+  height: optionalNumber(0, 300, "La talla debe estar entre 0 y 300 cm"),
   bloodPressure: z.string().optional(),
-  temperature: z.coerce.number().min(30).max(45).optional(),
-  heartRate: z.coerce.number().min(0).max(300).optional(),
+  temperature: optionalNumber(30, 45, "La temperatura debe estar entre 30 y 45 °C"),
+  heartRate: optionalNumber(0, 300, "La frecuencia debe estar entre 0 y 300"),
 });
 
 type FormValues = {
@@ -217,7 +224,7 @@ export function MedicalRecordForm({
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={form.handleSubmit(onSubmit, showFormErrors)} className="space-y-6">
       <div className="space-y-3">
         <h4 className="border-b pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Contexto de la Consulta

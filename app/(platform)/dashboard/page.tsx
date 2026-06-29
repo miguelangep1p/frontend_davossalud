@@ -113,6 +113,15 @@ export default async function DashboardPage() {
     },
   ];
 
+  const maxAppointments = Math.max(
+    ...stats.last7Days.map((item) => item.count),
+    1,
+  );
+  const weeklyTotal = stats.last7Days.reduce((total, day) => total + day.count, 0);
+  const dailyAverage = stats.last7Days.length
+    ? weeklyTotal / stats.last7Days.length
+    : 0;
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <PageHeader
@@ -132,8 +141,9 @@ export default async function DashboardPage() {
             {statCards.map((card) => (
               <Card
                 key={card.title}
-                className="overflow-hidden border-border/70 bg-white/90 shadow-sm"
+                className="group relative overflow-hidden border-border/60 bg-white/90 shadow-[0_12px_35px_rgba(15,23,42,0.05)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_45px_rgba(190,24,93,0.10)]"
               >
+                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-400 via-pink-500 to-fuchsia-500 opacity-70" />
                 <CardHeader className="flex flex-row items-start justify-between gap-4 pb-3">
                   <div className="space-y-1">
                     <CardTitle className="text-sm font-semibold text-muted-foreground">
@@ -143,7 +153,7 @@ export default async function DashboardPage() {
                       {card.value}
                     </div>
                   </div>
-                  <div className={`rounded-2xl p-3 ${card.accent}`}>
+                  <div className={`rounded-2xl p-3 transition-transform duration-300 group-hover:scale-110 ${card.accent}`}>
                     <card.icon className="h-5 w-5" />
                   </div>
                 </CardHeader>
@@ -156,7 +166,7 @@ export default async function DashboardPage() {
             ))}
           </section>
 
-          <section className="overflow-hidden rounded-xl border bg-card">
+          <section className="overflow-hidden rounded-2xl border border-border/60 bg-card/95 shadow-sm">
             <div className="flex items-center gap-2 border-b px-6 py-4">
               <Clock className="h-4 w-4 text-muted-foreground" />
               <h2 className="text-base font-semibold text-foreground">
@@ -214,21 +224,36 @@ export default async function DashboardPage() {
             )}
           </section>
 
-          <section className="overflow-hidden rounded-xl border bg-card">
-            <div className="border-b px-6 py-4">
-              <h2 className="text-base font-semibold text-foreground">
-                Citas de los últimos 7 días
-              </h2>
+          <section className="overflow-hidden rounded-2xl border border-border/60 bg-card/95 shadow-sm">
+            <div className="flex flex-wrap items-center gap-4 border-b px-6 py-5">
+              <div>
+                <h2 className="text-base font-semibold text-foreground">
+                  Actividad de citas
+                </h2>
+                <p className="mt-1 text-xs text-muted-foreground">Comportamiento de los últimos 7 días</p>
+              </div>
+              <div className="ml-auto flex gap-6 text-right">
+                <div>
+                  <p className="text-xl font-bold text-foreground">{weeklyTotal}</p>
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Total</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-rose-600">{dailyAverage.toFixed(1)}</p>
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Promedio/día</p>
+                </div>
+              </div>
             </div>
 
             {stats.last7Days.length > 0 ? (
-              <div className="flex h-36 items-end gap-2 px-6 py-6">
+              <div className="relative px-6 py-6">
+                <div className="pointer-events-none absolute inset-x-6 top-6 bottom-12 flex flex-col justify-between">
+                  {[100, 75, 50, 25, 0].map((line) => (
+                    <div key={line} className="border-t border-dashed border-border/60" />
+                  ))}
+                </div>
+                <div className="relative flex h-48 items-end gap-2 sm:gap-4">
                 {stats.last7Days.map((day) => {
-                  const maxCount = Math.max(
-                    ...stats.last7Days.map((item) => item.count),
-                    1,
-                  );
-                  const heightPct = (day.count / maxCount) * 100;
+                  const heightPct = (day.count / maxAppointments) * 100;
                   const label = new Date(`${day.date}T12:00:00`).toLocaleDateString(
                     "es-PE",
                     {
@@ -239,14 +264,15 @@ export default async function DashboardPage() {
                   return (
                     <div
                       key={day.date}
-                      className="flex flex-1 flex-col items-center gap-2"
+                      className="group flex h-full flex-1 flex-col items-center justify-end gap-2"
                     >
-                      <span className="text-xs font-semibold text-muted-foreground">
+                      <span className="rounded-full bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-700 opacity-80 transition group-hover:opacity-100">
                         {day.count}
                       </span>
-                      <div className="flex h-20 w-full items-end rounded-md bg-muted/30 px-1">
+                      <div className="flex h-36 w-full max-w-16 items-end overflow-hidden rounded-t-xl bg-rose-50/70">
                         <div
-                          className="w-full rounded-t-md bg-primary/75 transition-all"
+                          title={`${day.count} citas`}
+                          className="w-full rounded-t-xl bg-gradient-to-t from-rose-600 via-pink-500 to-fuchsia-400 shadow-[0_-8px_20px_rgba(236,72,153,0.18)] transition-all duration-500 group-hover:brightness-110"
                           style={{ height: `${Math.max(heightPct, 6)}%` }}
                         />
                       </div>
@@ -256,6 +282,7 @@ export default async function DashboardPage() {
                     </div>
                   );
                 })}
+                </div>
               </div>
             ) : (
               <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
