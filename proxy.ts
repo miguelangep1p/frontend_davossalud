@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = ["/login", "/register", "/verify-email"];
+const PUBLIC_ROUTES = ["/login"];
 
 export function proxy(request: NextRequest) {
   const token = request.cookies.get("auth_token")?.value;
@@ -29,11 +29,9 @@ export function proxy(request: NextRequest) {
   }
 
   if (pathname === "/") {
-    if (token && !isTokenExpired) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
-
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(
+      new URL(token && !isTokenExpired ? "/dashboard" : "/login", request.url),
+    );
   }
 
   if (!PUBLIC_ROUTES.includes(pathname) && (!token || isTokenExpired)) {
@@ -55,13 +53,11 @@ export const config = {
     "/usuarios/:path*",
     "/pacientes/:path*",
     "/citas/:path*",
+    "/historia-clinica/:path*",
     "/recetas/:path*",
     "/tratamientos/:path*",
     "/productos/:path*",
-    "/settings/:path*",
-    "/help/:path*",
+    "/caja/:path*",
     "/login",
-    "/register",
-    "/verify-email",
   ],
 };

@@ -1,17 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import {
-  MoreHorizontal,
-  PenIcon,
-  Trash2,
-  Eye,
-  Calendar,
-} from "lucide-react";
+import { Eye, MoreHorizontal, PenIcon, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Appointment, AppointmentStatus } from "@/types/appointment";
+import { toast } from "sonner";
 import { updateAppointmentStatusAction } from "@/lib/actions/appointment.actions";
-
+import { Appointment, AppointmentStatus } from "@/types/appointment";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -38,13 +32,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
 
 interface AppointmentsTableActionsProps {
   appointment: Appointment;
 }
 
-export function AppointmentsTableActions({ appointment }: AppointmentsTableActionsProps) {
+export function AppointmentsTableActions({
+  appointment,
+}: AppointmentsTableActionsProps) {
   const router = useRouter();
   const [viewOpen, setViewOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -54,15 +49,18 @@ export function AppointmentsTableActions({ appointment }: AppointmentsTableActio
   async function handleCancel() {
     setIsLoading(true);
     setError(null);
+
     try {
       await updateAppointmentStatusAction(appointment.id, {
         status: AppointmentStatus.CANCELLED,
       });
       toast.success("Cita cancelada correctamente");
       setCancelOpen(false);
-    } catch (err: any) {
-      toast.error(err.message || "Error al cancelar la cita");
-      setError(err.message || "Error al cancelar la cita");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Error al cancelar la cita";
+      toast.error(message);
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -80,16 +78,15 @@ export function AppointmentsTableActions({ appointment }: AppointmentsTableActio
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuLabel>Opciones</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          
+
           <DropdownMenuItem
             className="cursor-pointer"
             onClick={() => setViewOpen(true)}
           >
             <Eye className="mr-2 h-4 w-4" />
-            Ver Detalles
+            Ver detalles
           </DropdownMenuItem>
 
-          {/* Si queremos editar la cita */}
           <DropdownMenuItem
             className="cursor-pointer"
             onClick={() => router.push(`/citas/${appointment.id}/editar`)}
@@ -100,52 +97,72 @@ export function AppointmentsTableActions({ appointment }: AppointmentsTableActio
 
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            className="text-destructive focus:bg-destructive/10 cursor-pointer"
+            className="cursor-pointer text-destructive focus:bg-destructive/10"
             onClick={() => setCancelOpen(true)}
             disabled={appointment.status === AppointmentStatus.CANCELLED}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Cancelar Cita
+            Cancelar cita
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="sm:max-w-md p-8">
+        <DialogContent className="p-8 sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl">Detalles de la Cita</DialogTitle>
+            <DialogTitle className="text-xl">Detalles de la cita</DialogTitle>
             <DialogDescription>
-              Información de la cita el {appointment.date}
+              Informacion de la cita del {appointment.date}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-muted-foreground font-medium">Paciente</Label>
-              <div className="col-span-3 text-sm pl-4">{appointment.patient.firstName} {appointment.patient.lastName}</div>
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-muted-foreground font-medium">Doc.</Label>
-              <div className="col-span-3 text-sm pl-4">{appointment.patient.document}</div>
+              <Label className="text-right font-medium text-muted-foreground">
+                Paciente
+              </Label>
+              <div className="col-span-3 pl-4 text-sm">
+                {appointment.patient.firstName} {appointment.patient.lastName}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-muted-foreground font-medium">Especialista</Label>
-              <div className="col-span-3 text-sm pl-4">
+              <Label className="text-right font-medium text-muted-foreground">
+                Doc.
+              </Label>
+              <div className="col-span-3 pl-4 text-sm">
+                {appointment.patient.document}
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right font-medium text-muted-foreground">
+                Especialista
+              </Label>
+              <div className="col-span-3 pl-4 text-sm">
                 {appointment.staff?.user
                   ? `${appointment.staff.user.firstName} ${appointment.staff.user.lastName}`
                   : "Sin asignar"}
               </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-muted-foreground font-medium">Fecha</Label>
-              <div className="col-span-3 text-sm pl-4">{appointment.date}</div>
+              <Label className="text-right font-medium text-muted-foreground">
+                Fecha
+              </Label>
+              <div className="col-span-3 pl-4 text-sm">{appointment.date}</div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-muted-foreground font-medium">Horario</Label>
-              <div className="col-span-3 text-sm pl-4">{appointment.startTime ? `${appointment.startTime} - ${appointment.endTime}` : "Por coordinar"}</div>
+              <Label className="text-right font-medium text-muted-foreground">
+                Horario
+              </Label>
+              <div className="col-span-3 pl-4 text-sm">
+                {appointment.startTime
+                  ? `${appointment.startTime} - ${appointment.endTime}`
+                  : "Por coordinar"}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-muted-foreground font-medium">Estado</Label>
-              <div className="col-span-3 text-sm pl-4">{appointment.status}</div>
+              <Label className="text-right font-medium text-muted-foreground">
+                Estado
+              </Label>
+              <div className="col-span-3 pl-4 text-sm">{appointment.status}</div>
             </div>
           </div>
           <div className="flex justify-end">
@@ -159,12 +176,13 @@ export function AppointmentsTableActions({ appointment }: AppointmentsTableActio
       <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Está seguro de cancelar esta cita?</AlertDialogTitle>
+            <AlertDialogTitle>¿Esta seguro de cancelar esta cita?</AlertDialogTitle>
             <AlertDialogDescription>
-              La cita pasará a estado "Cancelada". Esta acción notificará al paciente si tuviera un sistema de notificaciones activo.
-             {error && (
-                <p className="text-red-500 mt-2 font-medium">{error}</p>
-              )}
+              La cita pasara a estado &quot;Cancelada&quot;. Esta accion notificara
+              al paciente si tuviera un sistema de notificaciones activo.
+              {error ? (
+                <p className="mt-2 font-medium text-red-500">{error}</p>
+              ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -174,7 +192,7 @@ export function AppointmentsTableActions({ appointment }: AppointmentsTableActio
               onClick={handleCancel}
               disabled={isLoading}
             >
-              {isLoading ? "Cancelando..." : "Sí, Cancelar"}
+              {isLoading ? "Cancelando..." : "Si, cancelar"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

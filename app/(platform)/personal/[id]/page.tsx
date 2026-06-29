@@ -1,15 +1,21 @@
-import { getSession } from "@/lib/actions/auth.actions";
-import { redirect } from "next/navigation";
-import { getStaffById } from "@/lib/services/staff";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { MoveLeft, Mail, IdCard, Phone, MapPin } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { IdCard, Mail, MapPin, MoveLeft, Phone } from "lucide-react";
+import { PageErrorState } from "@/components/layout/page-error-state";
+import { PageHeader } from "@/components/layout/page-header";
+import { ScheduleSection } from "@/components/schedules/schedule-section";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { InfoItem } from "@/components/ui/info-item";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getSession } from "@/lib/actions/auth.actions";
+import { getStaffById } from "@/lib/services/staff";
 import { Staff } from "@/types/staff";
 import { Role } from "@/types/user";
-import { ScheduleSection } from "@/components/schedules/schedule-section";
-import { InfoItem } from "@/components/ui/info-item";
+
+export async function generateMetadata() {
+  return { title: "Perfil del Personal | Davos Salud" };
+}
 
 export default async function PersonalProfilePage({
   params,
@@ -20,100 +26,129 @@ export default async function PersonalProfilePage({
   const { id } = await params;
 
   if (!token) {
-    return null;
+    redirect("/login");
   }
 
-  let staff: Staff;
+  let staff: Staff | null = null;
+  let errorMessage: string | null = null;
+
   try {
     staff = await getStaffById(id, token);
   } catch (error: unknown) {
-    const err = error instanceof Error ? error : new Error(String(error));
-    if (err.message === "UNAUTHORIZED") {
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
       redirect("/login");
     }
+
+    errorMessage =
+      error instanceof Error
+        ? error.message
+        : "No se pudo cargar el perfil del personal.";
+  }
+
+  if (!staff) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 gap-4 min-h-[50vh]">
-        <h2 className="text-2xl font-semibold text-destructive">
-          Error al cargar el perfil
-        </h2>
-        <p className="text-muted-foreground">
-          {err.message || "Ocurrió un problema inesperado"}
-        </p>
-        <Button asChild variant="outline">
-          <Link href="/personal">
-            <MoveLeft className="mr-2 h-4 w-4" /> Volver
-          </Link>
-        </Button>
+      <div className="flex flex-col gap-6 p-6">
+        <PageHeader
+          title="Perfil del personal"
+          description="Resumen del especialista, sus datos de contacto y sus horarios."
+          action={
+            <Button asChild variant="outline">
+              <Link href="/personal">
+                <MoveLeft className="mr-2 h-4 w-4" />
+                Volver a personal
+              </Link>
+            </Button>
+          }
+        />
+        <PageErrorState
+          title="No se pudo cargar el perfil"
+          description="La interfaz se mantuvo estable, pero no fue posible recuperar la ficha del personal."
+          detail={errorMessage ?? "Perfil no disponible."}
+        />
       </div>
     );
   }
 
   const { user, profilePhoto, specialty, document, phone, address } = staff;
-
   const initials =
     `${user.firstName?.[0] || ""}${user.lastName?.[0] || ""}`.toUpperCase();
 
   return (
-    <div className="flex flex-col gap-4 p-8 animate-in fade-in duration-500">
-      <div className="flex items-center gap-4">
-        <Button asChild variant="ghost" size="icon" className="rounded-md">
-          <Link href="/personal">
-            <MoveLeft className="h-5 w-5" />
-            <span className="sr-only">Volver Atrás</span>
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Perfil del Personal
-          </h1>
-          <p className="text-muted-foreground mt-1">Información detallada.</p>
-        </div>
-      </div>
+    <div className="flex flex-col gap-6 p-6">
+      <PageHeader
+        title="Perfil del personal"
+        description="Resumen del especialista, sus datos de contacto y sus horarios."
+        action={
+          <Button asChild variant="outline">
+            <Link href="/personal">
+              <MoveLeft className="mr-2 h-4 w-4" />
+              Volver a personal
+            </Link>
+          </Button>
+        }
+      />
 
-      <div className="flex flex-col md:flex-row items-center md:items-start gap-8 max-w-7xl pt-6 pl-12">
-        <Avatar className="h-20 w-20 shadow-sm">
-          <AvatarImage
-            src={profilePhoto || "/avatars/default.png"}
-            alt={`${user.firstName} ${user.lastName}`}
-            className="object-cover"
-          />
-          <AvatarFallback className="text-2xl font-semibold">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
+      <section className="rounded-2xl border bg-card p-6">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+          <Avatar className="h-24 w-24 ring-2 ring-border">
+            <AvatarImage
+              src={profilePhoto || "/avatars/default.png"}
+              alt={`${user.firstName} ${user.lastName}`}
+              className="object-cover"
+            />
+            <AvatarFallback className="text-2xl font-semibold">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
 
-        <div className="flex flex-col items-center md:items-start pt-2">
-          <h2 className="text-2xl text-foreground font-semibold">
-            {user.firstName} {user.lastName}
-          </h2>
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-3">
-            {user.roles?.map((role: Role) => (
-              <Badge key={role} variant="secondary" className="p-3 text-xs">
-                {role}
-              </Badge>
-            ))}
-            {specialty && (
-              <Badge
-                variant="outline"
-                className="p-3 border-muted-foreground/50 text-muted-foreground"
-              >
-                {specialty}
-              </Badge>
-            )}
+          <div className="flex-1 space-y-4">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                {user.firstName} {user.lastName}
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {user.roles?.map((role: Role) => (
+                  <Badge key={role} variant="secondary" className="font-medium">
+                    {role}
+                  </Badge>
+                ))}
+                {specialty ? (
+                  <Badge variant="outline" className="font-medium">
+                    {specialty}
+                  </Badge>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <InfoItem
+                icon={Mail}
+                label="Correo electronico"
+                value={user.email}
+              />
+              <InfoItem
+                icon={IdCard}
+                label="Documento"
+                value={document || "No registrado"}
+              />
+              <InfoItem
+                icon={Phone}
+                label="Telefono"
+                value={phone || "No registrado"}
+              />
+              <InfoItem
+                icon={MapPin}
+                label="Direccion"
+                value={address || "No registrada"}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="w-full max-w-7xl h-px bg-border/60 my-2 pl-12" />
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 max-w-7xl pl-12 my-2">
-        <InfoItem icon={Mail} label="Correo Electrónico" value={user.email} />
-        <InfoItem icon={IdCard} label="Documento de Identidad" value={document || "No registrado"} />
-        <InfoItem icon={Phone} label="Teléfono" value={phone || "No registrado"} />
-        <InfoItem icon={MapPin} label="Dirección" value={address || "No registrado"} />
-      </div>
-
-      <ScheduleSection staffId={staff.id} />
+      <section className="rounded-2xl border bg-card p-6">
+        <ScheduleSection staffId={staff.id} />
+      </section>
     </div>
   );
 }

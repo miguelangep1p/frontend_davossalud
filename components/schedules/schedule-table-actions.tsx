@@ -14,7 +14,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -58,8 +57,8 @@ export function ScheduleTableActions({ schedule }: { schedule: Schedule }) {
         throw new Error(result.error);
       }
       setDeleteOpen(false);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al eliminar");
     } finally {
       setIsLoading(false);
     }
@@ -91,8 +90,8 @@ export function ScheduleTableActions({ schedule }: { schedule: Schedule }) {
         throw new Error(result.error);
       }
       setEditOpen(false);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al actualizar");
     } finally {
       setIsLoading(false);
     }

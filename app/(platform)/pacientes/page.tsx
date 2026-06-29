@@ -4,39 +4,47 @@ import { getPatientsList } from "@/lib/services/patient";
 import { PatientsTable } from "@/components/patients/patients-table";
 import { AddPatientButton } from "@/components/patients/add-patient-button";
 import { Patient } from "@/types/patient";
+import { PageErrorState } from "@/components/layout/page-error-state";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default async function PatientsPage() {
   const token = await getSession();
   let patients: Patient[] = [];
+  let errorMessage: string | null = null;
 
-  if (token) {
-    try {
-      patients = await getPatientsList(token);
-    } catch (error: any) {
-      if (error.message === "UNAUTHORIZED") {
-        redirect("/login");
-      }
-      throw error;
+  if (!token) redirect("/login");
+
+  try {
+    patients = await getPatientsList(token);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      redirect("/login");
     }
+    errorMessage =
+      error instanceof Error
+        ? error.message
+        : "No se pudo cargar la lista de pacientes.";
   }
 
   return (
-    <div className="flex flex-col gap-6 p-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Gestión de Pacientes
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Administre la información y el historial básico de sus pacientes.
-          </p>
-        </div>
-        <AddPatientButton />
-      </div>
+    <div className="flex flex-col gap-6 p-6">
+      <PageHeader
+        title="Gestión de Pacientes"
+        description="Administra la información general, alertas y trazabilidad clínica básica de tus pacientes."
+        action={<AddPatientButton />}
+      />
 
-      <div className="w-full">
-        <PatientsTable data={patients} />
-      </div>
+      {errorMessage ? (
+        <PageErrorState
+          title="No se pudieron cargar los pacientes"
+          description="La página siguió operativa, pero el backend no respondió correctamente al consultar el padrón de pacientes."
+          detail={errorMessage}
+        />
+      ) : (
+        <div className="rounded-xl border bg-card overflow-hidden">
+          <PatientsTable data={patients} />
+        </div>
+      )}
     </div>
   );
 }

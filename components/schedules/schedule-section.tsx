@@ -1,7 +1,7 @@
+import { AddScheduleButton } from "./add-schedule-button";
+import { ScheduleTable } from "./schedule-table";
 import { getSession } from "@/lib/actions/auth.actions";
 import { getSchedulesByStaffId } from "@/lib/services/schedules";
-import { ScheduleTable } from "./schedule-table";
-import { AddScheduleButton } from "./add-schedule-button";
 import { Schedule } from "@/types/schedule";
 
 export async function ScheduleSection({ staffId }: { staffId: string }) {
@@ -11,20 +11,20 @@ export async function ScheduleSection({ staffId }: { staffId: string }) {
   if (token) {
     try {
       schedules = await getSchedulesByStaffId(staffId, token);
-    } catch (error) {
-      console.error("No se pudieron cargar los horarios", error);
+    } catch {
+      schedules = [];
     }
   }
 
   return (
-    <div className="flex flex-col gap-6 mt-6 w-full pl-12">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="flex w-full flex-col gap-6">
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-1">
           <h3 className="text-xl font-semibold text-foreground">
-            Registro de Turnos
+            Registro de turnos
           </h3>
-          <p className="text-muted-foreground text-sm">
-            Gestiona los horarios y la disponibilidad.
+          <p className="text-sm text-muted-foreground">
+            Gestiona los horarios y la disponibilidad del especialista.
           </p>
         </div>
         <AddScheduleButton staffId={staffId} />

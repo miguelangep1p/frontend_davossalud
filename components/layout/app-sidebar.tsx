@@ -1,40 +1,28 @@
 "use client";
 
-import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  BadgeCheck,
-  Bell,
   Box,
-  ChevronRight,
+  CalendarCheck,
   ChevronsUpDown,
-  CreditCard,
+  ClipboardList,
   FileText,
-  LogOut,
   LayoutDashboard,
+  LogOut,
   Sparkles,
   Stethoscope,
-  Settings,
-  HelpCircle,
-  Building2,
-  ClipboardList,
-  Wallet,
+  UserCircle2,
+  UserCog,
   Users,
-  CalendarCheck,
+  Wallet,
 } from "lucide-react";
-
 import { logout } from "@/lib/actions/auth.actions";
-
+import { SystemBrand } from "@/components/brand/system-brand";
+import { User } from "@/types/user";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -43,23 +31,20 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
-  SidebarGroup,
-  SidebarGroupLabel,
 } from "@/components/ui/sidebar";
 
 function DriveIcon() {
   return (
     <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
-      <path d="M8.1 3h7.1l3.2 5.5h-7.1L8.1 3Z" fill="#0F9D58" />
-      <path d="m5.3 8.5 3.5-5.5 3.5 5.5-3.5 6H1.8l3.5-6Z" fill="#F4B400" />
-      <path d="M12.3 14.5h7l-3.5 6h-7l3.5-6Z" fill="#4285F4" />
+      <path d="M8.1 3h7.1l3.2 5.5h-7.1L8.1 3Z" fill="#C2185B" />
+      <path d="m5.3 8.5 3.5-5.5 3.5 5.5-3.5 6H1.8l3.5-6Z" fill="#F48FB1" />
+      <path d="M12.3 14.5h7l-3.5 6h-7l3.5-6Z" fill="#E91E63" />
     </svg>
   );
 }
@@ -67,183 +52,124 @@ function DriveIcon() {
 type NavItem = {
   title: string;
   url: string;
+  icon: React.ComponentType | (() => React.JSX.Element);
   external?: boolean;
-  icon?: React.ComponentType | (() => React.JSX.Element);
 };
 
-type NavGroup = {
-  title: string;
-  url: string;
-  icon: React.ComponentType;
-  items: NavItem[];
-};
+const quickLinks: NavItem[] = [
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Pacientes", url: "/pacientes", icon: Users },
+  { title: "Citas", url: "/citas", icon: CalendarCheck },
+];
 
-const data = {
-  user: {
-    name: "Dr. Admin",
-    email: "admin@davossalud.com",
-    avatar: null,
+const clinicalLinks: NavItem[] = [
+  { title: "Historia clínica", url: "/historia-clinica", icon: ClipboardList },
+  { title: "Recetas", url: "/recetas", icon: FileText },
+  { title: "Tratamientos", url: "/tratamientos", icon: Sparkles },
+  {
+    title: "Drive clínico",
+    url: "https://drive.google.com/drive/folders/1kyn4YZLEopOBPEXnCJoCIwXueXglUJsh",
+    icon: DriveIcon,
+    external: true,
   },
-  teams: [
-    {
-      name: "Davos Salud",
-      logo: Building2,
-      plan: "Principal",
-    },
-  ],
-  navMain: [
-    {
-      title: "Plataforma",
-      url: "#",
-      icon: LayoutDashboard,
-      items: [
-        { title: "Dashboard", url: "/dashboard" },
-      ],
-    },
-    {
-      title: "Clínica",
-      url: "#",
-      icon: Stethoscope,
-      items: [
-        { title: "Pacientes", url: "/pacientes" },
-        { title: "Citas", url: "/citas" },
-        { title: "Historia Clínica", url: "/historia-clinica", icon: ClipboardList },
-        { title: "Recetas", url: "/recetas", icon: FileText },
-        { title: "Tratamientos", url: "/tratamientos", icon: Sparkles },
-        {
-          title: "Drive",
-          url: "https://drive.google.com/drive/folders/1kyn4YZLEopOBPEXnCJoCIwXueXglUJsh",
-          external: true,
-          icon: DriveIcon,
-        },
-      ],
-    },
-    {
-      title: "Administración",
-      url: "#",
-      icon: Wallet,
-      items: [
-        { title: "Caja", url: "/caja", icon: Wallet },
-        { title: "Productos", url: "/productos", icon: Box },
-        { title: "Personal", url: "/personal", icon: Users },
-        { title: "Usuarios", url: "/usuarios" },
-      ],
-    },
-  ] satisfies NavGroup[],
-  navSecondary: [
-    {
-      title: "Configuración",
-      url: "/settings",
-      icon: Settings,
-    },
-    {
-      title: "Ayuda",
-      url: "/help",
-      icon: HelpCircle,
-    },
-  ],
-};
+];
 
-export function AppSidebar() {
-  const [activeTeam] = React.useState(data.teams[0]);
+const adminLinks: NavItem[] = [
+  { title: "Caja", url: "/caja", icon: Wallet },
+  { title: "Productos", url: "/productos", icon: Box },
+  { title: "Personal", url: "/personal", icon: Stethoscope },
+  { title: "Usuarios", url: "/usuarios", icon: UserCog },
+];
+
+export function AppSidebar({ user }: { user?: User | null }) {
   const pathname = usePathname();
   const router = useRouter();
-  const isGroupActive = (items: NavItem[]) =>
-    items.some((item) => !item.external && pathname.startsWith(item.url));
+
+  const isActive = (url: string, external?: boolean) =>
+    !external && (pathname === url || pathname.startsWith(`${url}/`));
+
+  const renderItem = (item: NavItem) => (
+    <SidebarMenuItem key={item.title}>
+      <SidebarMenuButton
+        tooltip={item.title}
+        isActive={isActive(item.url, item.external)}
+        className="rounded-xl"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+
+          if (item.external) {
+            window.open(item.url, "_blank", "noopener,noreferrer");
+            return;
+          }
+
+          router.push(item.url);
+        }}
+      >
+        <item.icon />
+        <span>{item.title}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
 
   return (
     <Sidebar variant="inset" collapsible="icon">
-      <SidebarHeader>
+      <SidebarHeader className="border-b border-sidebar-border/70 px-2 pb-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <activeTeam.logo className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">
-                  {activeTeam.name}
-                </span>
-                <span className="truncate text-xs">{activeTeam.plan}</span>
-              </div>
-            </SidebarMenuButton>
+            <div className="rounded-2xl border border-rose-100/80 bg-white px-3 py-3 shadow-sm">
+              <SystemBrand compact />
+            </div>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="gap-1 px-2 py-4">
         <SidebarGroup>
-          <SidebarGroupLabel>General</SidebarGroupLabel>
-          <SidebarMenu>
-            {data.navMain.map((item) => (
-              <Collapsible
-                key={item.title}
-                asChild
-                defaultOpen={isGroupActive(item.items)}
-                className="group/collapsible"
-              >
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip={item.title}>
-                      {item.icon && <item.icon />}
-                      <span>{item.title}</span>
-                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {item.items?.map((subItem) => (
-                        <SidebarMenuSubItem key={subItem.title}>
-                          <SidebarMenuSubButton
-                            isActive={!subItem.external && pathname.startsWith(subItem.url)}
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              if (subItem.external) {
-                                window.open(subItem.url, "_blank", "noopener,noreferrer");
-                                return;
-                              }
+          <SidebarGroupLabel>Principal</SidebarGroupLabel>
+          <SidebarMenu>{quickLinks.map(renderItem)}</SidebarMenu>
+        </SidebarGroup>
 
-                              router.push(subItem.url);
-                            }}
-                          >
-                            {subItem.icon ? <subItem.icon /> : null}
-                            <span>{subItem.title}</span>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
-            ))}
-          </SidebarMenu>
+        <SidebarGroup>
+          <SidebarGroupLabel>Gestión clínica</SidebarGroupLabel>
+          <SidebarMenu>{clinicalLinks.map(renderItem)}</SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Administración</SidebarGroupLabel>
+          <SidebarMenu>{adminLinks.map(renderItem)}</SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter className="border-t border-sidebar-border/70 px-2 pt-4">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  className="rounded-xl data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="size-8 rounded-lg">
-                    {data.user.avatar ? (
-                      <AvatarImage src={data.user.avatar} alt={data.user.name} />
+                    {user?.staff?.profilePhoto ? (
+                      <AvatarImage
+                        src={user.staff.profilePhoto}
+                        alt={user.firstName || "Davos Salud"}
+                      />
                     ) : null}
-                    <AvatarFallback className="rounded-lg">DS</AvatarFallback>
+                    <AvatarFallback className="rounded-lg bg-rose-100 text-rose-700">
+                      DS
+                    </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">
-                      {data.user.name}
+                      {user
+                        ? `${user.firstName} ${user.lastName}`
+                        : "Dr. Admin"}
                     </span>
-                    <span className="truncate text-xs">{data.user.email}</span>
+                    <span className="truncate text-xs">
+                      {user?.email || "admin@davossalud.com"}
+                    </span>
                   </div>
                   <ChevronsUpDown className="ml-auto size-4" />
                 </SidebarMenuButton>
@@ -254,28 +180,19 @@ export function AppSidebar() {
                 align="end"
                 sideOffset={4}
               >
-                <DropdownMenuGroup>
-                  <DropdownMenuItem>
-                    <Settings className="mr-2 size-4" />
-                    Configuración
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
+                <div className="px-3 py-2">
+                  <p className="text-sm font-semibold text-foreground">
+                    {user ? `${user.firstName} ${user.lastName}` : "Dr. Admin"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {user?.email || "admin@davossalud.com"}
+                  </p>
+                </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem>
-                    <BadgeCheck className="mr-2 size-4" />
-                    Cuenta
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <CreditCard className="mr-2 size-4" />
-                    Facturación
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Bell className="mr-2 size-4" />
-                    Notificaciones
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push("/perfil")}>
+                  <UserCircle2 className="mr-2 size-4" />
+                  Mi perfil
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={async () => await logout()}>
                   <LogOut className="mr-2 size-4" />
                   Cerrar sesión

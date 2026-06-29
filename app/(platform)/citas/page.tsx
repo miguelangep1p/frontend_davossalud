@@ -1,16 +1,12 @@
-import { getSession } from "@/lib/actions/auth.actions";
 import { redirect } from "next/navigation";
+import { getSession } from "@/lib/actions/auth.actions";
 import { getAppointmentsList } from "@/lib/services/appointment";
-import { AppointmentsTable } from "@/components/appointments/appointments-table";
 import { AddAppointmentButton } from "@/components/appointments/add-appointment-button";
+import { AppointmentsCalendarLink } from "@/components/appointments/appointments-calendar-link";
+import { AppointmentsTable } from "@/components/appointments/appointments-table";
+import { PageErrorState } from "@/components/layout/page-error-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { Appointment } from "@/types/appointment";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 export default async function AppointmentsPage(props: {
   searchParams: Promise<{ date?: string; staffId?: string; status?: string }>;
@@ -20,49 +16,46 @@ export default async function AppointmentsPage(props: {
   let appointments: Appointment[] = [];
   let errorMessage: string | null = null;
 
-  if (token) {
-    try {
-      appointments = await getAppointmentsList(token, searchParams);
-    } catch (error: any) {
-      if (error.message === "UNAUTHORIZED") {
-        redirect("/login");
-      }
-      errorMessage = error.message || "No se pudo cargar la lista de citas.";
-    }
-  } else {
+  if (!token) {
     redirect("/login");
   }
 
-  return (
-    <div className="flex flex-col gap-6 p-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestión de Citas</h1>
-          <p className="text-muted-foreground mt-1">
-            Administre la agenda, reserve y gestione las citas de la clínica.
-          </p>
-        </div>
-        <AddAppointmentButton />
-      </div>
+  try {
+    appointments = await getAppointmentsList(token, searchParams);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      redirect("/login");
+    }
+    errorMessage =
+      error instanceof Error
+        ? error.message
+        : "No se pudo cargar la lista de citas.";
+  }
 
-      <div className="w-full">
-        {errorMessage ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>No se pudo cargar las citas</CardTitle>
-              <CardDescription>
-                El backend respondiO con un error y la pAgina evitO romper el render del
-                servidor.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              {errorMessage}
-            </CardContent>
-          </Card>
-        ) : (
+  return (
+    <div className="flex flex-col gap-6 p-6">
+      <PageHeader
+        title="Gestión de citas"
+        description="Administra la agenda, coordina horarios y gestiona el ciclo completo de las citas clínicas."
+        action={
+          <div className="flex flex-wrap gap-3">
+            <AppointmentsCalendarLink />
+            <AddAppointmentButton />
+          </div>
+        }
+      />
+
+      {errorMessage ? (
+        <PageErrorState
+          title="No se pudieron cargar las citas"
+          description="La página se mantuvo estable, pero el backend devolvió un error al consultar la agenda."
+          detail={errorMessage}
+        />
+      ) : (
+        <div className="overflow-hidden rounded-xl border bg-card">
           <AppointmentsTable data={appointments} />
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

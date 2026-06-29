@@ -4,6 +4,13 @@ import { revalidatePath } from "next/cache";
 import { getPatientById, createPatient, updatePatient, deletePatient } from "@/lib/services/patient";
 import { getSession } from "@/lib/actions/auth.actions";
 import { CreatePatientDto, UpdatePatientDto } from "@/types/patient";
+import { getPatientsList } from "@/lib/services/patient";
+
+export async function getPatientsAction() {
+  const token = await getSession();
+  if (!token) throw new Error("UNAUTHORIZED");
+  return await getPatientsList(token);
+}
 
 export async function getPatientByIdAction(id: string) {
   const token = await getSession();

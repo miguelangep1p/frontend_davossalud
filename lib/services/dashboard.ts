@@ -15,7 +15,10 @@ export interface DashboardStats {
     endTime: string | null;
     status: string;
     patient: { firstName: string; lastName: string };
-    staff: { specialty?: string; user?: { firstName: string; lastName: string } };
+    staff: {
+      specialty?: string;
+      user?: { firstName: string; lastName: string };
+    };
   }>;
   last7Days: Array<{ date: string; count: number }>;
 }
@@ -25,7 +28,14 @@ export async function getDashboardStats(token: string): Promise<DashboardStats> 
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
   });
-  if (res.status === 401) throw new Error("UNAUTHORIZED");
-  if (!res.ok) throw new Error("Error al cargar estadísticas");
+
+  if (res.status === 401) {
+    throw new Error("UNAUTHORIZED");
+  }
+
+  if (!res.ok) {
+    throw new Error("Error al cargar estadisticas");
+  }
+
   return res.json();
 }

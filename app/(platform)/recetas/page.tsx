@@ -8,13 +8,8 @@ import { Patient } from "@/types/patient";
 import { Staff } from "@/types/staff";
 import { AddRecipeButton } from "@/components/recipes/add-recipe-button";
 import { RecipesTable } from "@/components/recipes/recipes-table";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
+import { PageErrorState } from "@/components/layout/page-error-state";
 
 export default async function RecipesPage() {
   const token = await getSession();
@@ -23,49 +18,44 @@ export default async function RecipesPage() {
   let staffMembers: Staff[] = [];
   let errorMessage: string | null = null;
 
-  if (token) {
-    try {
-      [recipes, patients, staffMembers] = await Promise.all([
-        getRecipesList(token),
-        getPatientsList(token),
-        getStaffList(token),
-      ]);
-    } catch (error: any) {
-      if (error.message === "UNAUTHORIZED") {
-        redirect("/login");
-      }
-      errorMessage = error.message || "No se pudo cargar el módulo de recetas.";
+  if (!token) redirect("/login");
+
+  try {
+    [recipes, patients, staffMembers] = await Promise.all([
+      getRecipesList(token),
+      getPatientsList(token),
+      getStaffList(token),
+    ]);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      redirect("/login");
     }
-  } else {
-    redirect("/login");
+    errorMessage =
+      error instanceof Error
+        ? error.message
+        : "No se pudo cargar el módulo de recetas.";
   }
 
   return (
-    <div className="flex flex-col gap-6 p-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Recetas</h1>
-          <p className="text-muted-foreground mt-1">
-            Registre recetas de forma guiada y genere un PDF clínico en media hoja.
-          </p>
-        </div>
-        <AddRecipeButton patients={patients} staffMembers={staffMembers} />
-      </div>
+    <div className="flex flex-col gap-6 p-6">
+      <PageHeader
+        title="Recetas"
+        description="Registra recetas médicas de forma guiada y genera documentos PDF listos para atención clínica."
+        action={
+          <AddRecipeButton patients={patients} staffMembers={staffMembers} />
+        }
+      />
 
       {errorMessage ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>No se pudo cargar recetas</CardTitle>
-            <CardDescription>
-              El backend respondió con error y la página evitó romper el render.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            {errorMessage}
-          </CardContent>
-        </Card>
+        <PageErrorState
+          title="No se pudieron cargar las recetas"
+          description="La vista se mantuvo estable, pero el backend devolvió un error al consultar el módulo."
+          detail={errorMessage}
+        />
       ) : (
-        <RecipesTable data={recipes} />
+        <div className="rounded-xl border bg-card overflow-hidden">
+          <RecipesTable data={recipes} />
+        </div>
       )}
     </div>
   );

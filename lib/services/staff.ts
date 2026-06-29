@@ -1,4 +1,4 @@
-import { Staff } from "@/types/staff"
+import { CreateStaffDto, Staff, UpdateStaffDto } from "@/types/staff"
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -42,7 +42,7 @@ export async function getStaffById(id: string, token: string): Promise<Staff> {
   return response.json()
 }
 
-export async function updateStaff(id: string, data: Partial<Staff>, token: string): Promise<Staff> {
+export async function updateStaff(id: string, data: UpdateStaffDto, token: string): Promise<Staff> {
   const response = await fetch(`${BASE_URL}/staff/${id}`, {
     method: "PATCH",
     headers: {
@@ -62,7 +62,7 @@ export async function updateStaff(id: string, data: Partial<Staff>, token: strin
   return response.json()
 }
 
-export async function createStaff(data: any, token: string): Promise<Staff> {
+export async function createStaff(data: CreateStaffDto, token: string): Promise<Staff> {
   const response = await fetch(`${BASE_URL}/staff`, {
     method: "POST",
     headers: {

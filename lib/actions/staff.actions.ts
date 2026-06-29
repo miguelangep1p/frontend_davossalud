@@ -1,9 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getStaffById, updateStaff, deleteStaff, createStaff } from "@/lib/services/staff";
+import { getStaffById, getStaffList, updateStaff, deleteStaff, createStaff } from "@/lib/services/staff";
 import { getSession } from "@/lib/actions/auth.actions";
-import { Staff } from "@/types/staff";
+import { CreateStaffDto, UpdateStaffDto } from "@/types/staff";
+
+export async function getStaffListAction() {
+  const token = await getSession();
+  if (!token) throw new Error("UNAUTHORIZED");
+  return await getStaffList(token);
+}
 
 export async function getStaffByIdAction(id: string) {
   const token = await getSession();
@@ -11,7 +17,7 @@ export async function getStaffByIdAction(id: string) {
   return await getStaffById(id, token);
 }
 
-export async function updateStaffAction(id: string, data: Partial<Staff>) {
+export async function updateStaffAction(id: string, data: UpdateStaffDto) {
   const token = await getSession();
   if (!token) throw new Error("UNAUTHORIZED");
   
@@ -20,7 +26,7 @@ export async function updateStaffAction(id: string, data: Partial<Staff>) {
   return updatedStaff;
 }
 
-export async function createStaffAction(data: any) {
+export async function createStaffAction(data: CreateStaffDto) {
   const token = await getSession();
   if (!token) throw new Error("UNAUTHORIZED");
 

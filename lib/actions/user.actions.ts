@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { getSession } from "./auth.actions";
-import { getUsers, createUser, updateUser, deleteUser, updateUserPassword, updateUserEmail } from "../services/user";
+import { getUsers, createUser, updateUser, deleteUser, updateUserPassword, updateUserEmail, getUserProfile } from "../services/user";
+import { CreateUserDto, UpdateUserDto } from "@/types/user";
 
 export async function getUsersAction(filters?: { withoutStaff?: boolean }) {
   const token = await getSession();
@@ -11,7 +12,18 @@ export async function getUsersAction(filters?: { withoutStaff?: boolean }) {
   return await getUsers(token, filters);
 }
 
-export async function createUserAction(data: any) {
+export async function getUserProfileAction() {
+  const token = await getSession();
+  if (!token) return null;
+  
+  try {
+    return await getUserProfile(token);
+  } catch {
+    return null;
+  }
+}
+
+export async function createUserAction(data: CreateUserDto) {
   const token = await getSession();
   if (!token) throw new Error("UNAUTHORIZED");
 
@@ -20,7 +32,7 @@ export async function createUserAction(data: any) {
   return newUser;
 }
 
-export async function updateUserAction(id: string, data: any) {
+export async function updateUserAction(id: string, data: UpdateUserDto) {
   const token = await getSession();
   if (!token) throw new Error("UNAUTHORIZED");
 
@@ -29,7 +41,10 @@ export async function updateUserAction(id: string, data: any) {
   return updatedUser;
 }
 
-export async function updateUserPasswordAction(id: string, data: any) {
+export async function updateUserPasswordAction(
+  id: string,
+  data: { password: string },
+) {
   const token = await getSession();
   if (!token) throw new Error("UNAUTHORIZED");
 
@@ -37,7 +52,10 @@ export async function updateUserPasswordAction(id: string, data: any) {
   revalidatePath("/usuarios");
 }
 
-export async function updateUserEmailAction(id: string, data: any) {
+export async function updateUserEmailAction(
+  id: string,
+  data: { email: string },
+) {
   const token = await getSession();
   if (!token) throw new Error("UNAUTHORIZED");
 

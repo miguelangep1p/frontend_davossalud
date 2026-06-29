@@ -27,6 +27,28 @@ export async function getUsers(token: string, filters?: { withoutStaff?: boolean
 
   return response.json();
 }
+
+export async function getUserProfile(token: string) {
+  const response = await fetch(`${BASE_URL}/users/profile`, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    cache: 'no-store'
+  });
+
+  if (response.status === 401) {
+    throw new Error("UNAUTHORIZED");
+  }
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Error al obtener perfil");
+  }
+
+  const data = await response.json();
+  return data.user;
+}
 export async function createUser(token: string, data: any): Promise<User> {
   const response = await fetch(`${BASE_URL}/users`, {
     method: "POST",

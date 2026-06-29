@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CashEntry, CashEntryType, CashPaymentMethod } from "@/types/cash";
+import { CashEntry, CashEntryType } from "@/types/cash";
 import { CashEntryTableActions } from "./cash-entry-table-actions";
 import { cn } from "@/lib/utils";
 

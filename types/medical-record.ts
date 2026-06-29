@@ -10,6 +10,7 @@ export interface MedicalRecord {
   diagnosis?: string;
   treatment?: string;
   observations?: string;
+  imageUrls?: string[];
   weight?: number;
   height?: number;
   bloodPressure?: string;
@@ -41,6 +42,7 @@ export interface CreateMedicalRecordDto {
   diagnosis?: string;
   treatment?: string;
   observations?: string;
+  imageUrls?: string[];
   weight?: number;
   height?: number;
   bloodPressure?: string;
@@ -48,4 +50,4 @@ export interface CreateMedicalRecordDto {
   heartRate?: number;
 }
 
-export interface UpdateMedicalRecordDto extends Partial<CreateMedicalRecordDto> {}
+export type UpdateMedicalRecordDto = Partial<CreateMedicalRecordDto>;

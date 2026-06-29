@@ -7,8 +7,6 @@ import { LoginCredentials } from "@/types/auth";
 const SESSION_COOKIE_NAME = "auth_token";
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-// SESSION MANAGEMENT
-
 export async function createSession(token: string) {
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
@@ -16,7 +14,7 @@ export async function createSession(token: string) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24, 
+    maxAge: 60 * 60 * 24,
   });
 }
 
@@ -30,8 +28,6 @@ export async function getSession() {
   return cookieStore.get(SESSION_COOKIE_NAME)?.value;
 }
 
-// AUTH ACTIONS
-
 export async function login(credentials: LoginCredentials) {
   const response = await fetch(`${BASE_URL}/auth/login`, {
     method: "POST",
@@ -43,7 +39,7 @@ export async function login(credentials: LoginCredentials) {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || "Error al iniciar sesión");
+    throw new Error(error.message || "Error al iniciar sesion");
   }
 
   const data = await response.json();
@@ -58,12 +54,12 @@ export async function logout() {
       await fetch(`${BASE_URL}/auth/logout`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
-    } catch (error) {
-      console.error("Failed to call backend logout:", error);
+    } catch {
+      // El cierre local de sesion es suficiente para el frontend.
     }
   }
 

@@ -4,8 +4,16 @@ import { useRef, useState } from "react";
 import { Camera, Loader2, User } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { uploadImageFile } from "@/lib/client-upload";
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message === "File too large") {
+    return "La imagen excede el límite permitido de 15 MB.";
+  }
+
+  return error instanceof Error ? error.message : "Error al subir la foto";
+}
 
 interface Props {
   currentUrl?: string | null;
@@ -30,34 +38,12 @@ export function AvatarUpload({ currentUrl, initials = "?", onUpload, className }
     // Upload al backend
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      // Obtener token de cookie
-      const tokenCookie = document.cookie
-        .split("; ")
-        .find((c) => c.startsWith("auth_token="))
-        ?.split("=")?.[1];
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const res = await fetch(`${apiUrl}/upload/profile-photo`, {
-        method: "POST",
-        headers: tokenCookie ? { Authorization: `Bearer ${tokenCookie}` } : {},
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Error al subir la imagen");
-      }
-
-      const data = await res.json();
-      const fullUrl = `${apiUrl}${data.url}`;
-      setPreview(fullUrl);
-      onUpload?.(fullUrl);
+      const data = await uploadImageFile("/upload/profile-photo", file);
+      setPreview(data.url);
+      onUpload?.(data.url);
       toast.success("Foto actualizada correctamente");
-    } catch (err: any) {
-      toast.error(err.message || "Error al subir la foto");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
       setPreview(currentUrl || null);
     } finally {
       setIsUploading(false);

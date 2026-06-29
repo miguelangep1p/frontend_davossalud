@@ -109,7 +109,7 @@ export async function rescheduleAppointment(
   }
 
   const response = await fetch(`${BASE_URL}/appointments/${id}/reschedule`, {
-    method: "PATCH",
+    method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",

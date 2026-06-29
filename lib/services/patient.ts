@@ -12,6 +12,7 @@ export async function getPatientsList(token: string): Promise<Patient[]> {
   });
 
   if (response.status === 401) throw new Error("UNAUTHORIZED");
+  if (response.status === 403) throw new Error("No tienes permisos para consultar pacientes");
 
   if (!response.ok) {
     const error = await response.json();
@@ -31,6 +32,7 @@ export async function getPatientById(id: string, token: string): Promise<Patient
   });
 
   if (response.status === 401) throw new Error("UNAUTHORIZED");
+  if (response.status === 403) throw new Error("No tienes permisos para consultar este paciente");
 
   if (!response.ok) {
     const error = await response.json();
@@ -50,6 +52,7 @@ export async function searchPatients(query: string, token: string): Promise<Pati
   });
 
   if (response.status === 401) throw new Error("UNAUTHORIZED");
+  if (response.status === 403) throw new Error("No tienes permisos para buscar pacientes");
 
   if (!response.ok) {
     const error = await response.json();
@@ -70,6 +73,7 @@ export async function createPatient(data: CreatePatientDto, token: string): Prom
   });
 
   if (response.status === 401) throw new Error("UNAUTHORIZED");
+  if (response.status === 403) throw new Error("No tienes permisos para crear pacientes");
 
   if (!response.ok) {
     const error = await response.json();
@@ -90,6 +94,7 @@ export async function updatePatient(id: string, data: UpdatePatientDto, token: s
   });
 
   if (response.status === 401) throw new Error("UNAUTHORIZED");
+  if (response.status === 403) throw new Error("No tienes permisos para actualizar este paciente");
 
   if (!response.ok) {
     const error = await response.json();
@@ -109,6 +114,7 @@ export async function deletePatient(id: string, token: string): Promise<void> {
   });
 
   if (response.status === 401) throw new Error("UNAUTHORIZED");
+  if (response.status === 403) throw new Error("No tienes permisos para eliminar este paciente");
 
   if (!response.ok) {
     const error = await response.json();

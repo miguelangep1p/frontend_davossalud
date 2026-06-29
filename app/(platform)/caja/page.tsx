@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Plus, Wallet, TrendingUp, TrendingDown, Scale } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, Scale } from "lucide-react";
 import { getSession } from "@/lib/actions/auth.actions";
 import { getCashEntries, getCashSummary } from "@/lib/services/cash";
 import { CashEntry, CashSummary } from "@/types/cash";
@@ -24,8 +24,10 @@ export default async function CajaPage() {
       getCashEntries(token),
       getCashSummary(token),
     ]);
-  } catch (error: any) {
-    if (error.message === "UNAUTHORIZED") redirect("/login");
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      redirect("/login");
+    }
   }
 
   const formatMoney = (n: number) =>

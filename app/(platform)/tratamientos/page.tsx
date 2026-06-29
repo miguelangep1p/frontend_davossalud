@@ -4,61 +4,47 @@ import { getTreatmentsList } from "@/lib/services/treatment";
 import { AddTreatmentButton } from "@/components/treatments/add-treatment-button";
 import { TreatmentsTable } from "@/components/treatments/treatments-table";
 import { Treatment } from "@/types/treatment";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
+import { PageErrorState } from "@/components/layout/page-error-state";
 
 export default async function TreatmentsPage() {
   const token = await getSession();
   let treatments: Treatment[] = [];
   let errorMessage: string | null = null;
 
-  if (token) {
-    try {
-      treatments = await getTreatmentsList(token);
-    } catch (error: any) {
-      if (error.message === "UNAUTHORIZED") {
-        redirect("/login");
-      }
-      errorMessage =
-        error.message || "No se pudo cargar la lista de tratamientos.";
+  if (!token) redirect("/login");
+
+  try {
+    treatments = await getTreatmentsList(token);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      redirect("/login");
     }
+    errorMessage =
+      error instanceof Error
+        ? error.message
+        : "No se pudo cargar la lista de tratamientos.";
   }
 
   return (
-    <div className="flex flex-col gap-6 p-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestión de Tratamientos</h1>
-          <p className="text-muted-foreground mt-1">
-            Administre los tratamientos disponibles para la clínica.
-          </p>
-        </div>
-        <AddTreatmentButton />
-      </div>
+    <div className="flex flex-col gap-6 p-6">
+      <PageHeader
+        title="Gestión de Tratamientos"
+        description="Administra los tratamientos disponibles y mantén una oferta clínica consistente para el equipo."
+        action={<AddTreatmentButton />}
+      />
 
-      <div className="w-full">
-        {errorMessage ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>No se pudo cargar los tratamientos</CardTitle>
-              <CardDescription>
-                El backend no respondió correctamente y la página evitó romper el
-                render del servidor.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              {errorMessage}
-            </CardContent>
-          </Card>
-        ) : (
+      {errorMessage ? (
+        <PageErrorState
+          title="No se pudieron cargar los tratamientos"
+          description="La vista siguió estable, pero el backend devolvió un error al consultar los tratamientos."
+          detail={errorMessage}
+        />
+      ) : (
+        <div className="rounded-xl border bg-card overflow-hidden">
           <TreatmentsTable data={treatments} />
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

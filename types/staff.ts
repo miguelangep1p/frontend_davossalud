@@ -21,4 +21,4 @@ export interface CreateStaffDto {
   specialty?: string;
 }
 
-export interface UpdateStaffDto extends Partial<CreateStaffDto> {}
+export type UpdateStaffDto = Partial<CreateStaffDto>;

@@ -1,52 +1,64 @@
-import { getSession } from "@/lib/actions/auth.actions";
 import { redirect } from "next/navigation";
+import { AppointmentForm } from "@/components/appointments/appointment-form";
+import { PageErrorState } from "@/components/layout/page-error-state";
+import { PageHeader } from "@/components/layout/page-header";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getSession } from "@/lib/actions/auth.actions";
 import { getPatientsList } from "@/lib/services/patient";
 import { getStaffList } from "@/lib/services/staff";
-import { AppointmentForm } from "@/components/appointments/appointment-form";
 import { Patient } from "@/types/patient";
 import { Staff } from "@/types/staff";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export default async function NewAppointmentPage() {
   const token = await getSession();
   let patients: Patient[] = [];
   let staffMembers: Staff[] = [];
+  let errorMessage: string | null = null;
 
-  if (token) {
-    try {
-      patients = await getPatientsList(token);
-      staffMembers = await getStaffList(token);
-    } catch (error: any) {
-      if (error.message === "UNAUTHORIZED") {
-        redirect("/login");
-      }
-      // Si falla la carga, podríamos redirigir o mostrar un error
-      console.error(error);
-    }
-  } else {
+  if (!token) {
     redirect("/login");
   }
 
-  return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Agendar Nueva Cita</h1>
-        <p className="text-muted-foreground mt-1">
-          Complete los datos para registrar una nueva reserva.
-        </p>
-      </div>
+  try {
+    patients = await getPatientsList(token);
+    staffMembers = await getStaffList(token);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      redirect("/login");
+    }
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Datos de la Cita</CardTitle>
-          <CardDescription>
-            Asegúrese de verificar la disponibilidad del especialista antes de confirmar.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AppointmentForm patients={patients} staffMembers={staffMembers} />
-        </CardContent>
-      </Card>
+    errorMessage =
+      error instanceof Error
+        ? error.message
+        : "No se pudieron cargar los datos base de la cita.";
+  }
+
+  return (
+    <div className="mx-auto flex max-w-4xl flex-col gap-6 p-6">
+      <PageHeader
+        title="Agendar nueva cita"
+        description="Completa los datos necesarios para registrar una nueva reserva."
+      />
+
+      {errorMessage ? (
+        <PageErrorState
+          title="No se pudo preparar el formulario"
+          description="La interfaz se mantuvo estable, pero faltan datos para registrar la cita."
+          detail={errorMessage}
+        />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Datos de la cita</CardTitle>
+            <CardDescription>
+              Verifica la disponibilidad del especialista antes de confirmar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AppointmentForm patients={patients} staffMembers={staffMembers} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -58,7 +58,12 @@ export function UserForm({ initialData, onSuccess }: UserFormProps) {
     setIsLoading(true);
     try {
       if (initialData) {
-        const { email, ...updateData } = values;
+        const updateData = {
+          firstName: values.firstName,
+          lastName: values.lastName,
+          roles: values.roles,
+          isActive: values.isActive,
+        };
         await updateUserAction(initialData.id, updateData);
         toast.success("Usuario actualizado correctamente");
       } else {
@@ -67,8 +72,12 @@ export function UserForm({ initialData, onSuccess }: UserFormProps) {
       }
       form.reset();
       if (onSuccess) onSuccess();
-    } catch (error: any) {
-      toast.error(error.message || "Error al procesar el usuario");
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Error al procesar el usuario",
+      );
     } finally {
       setIsLoading(false);
     }

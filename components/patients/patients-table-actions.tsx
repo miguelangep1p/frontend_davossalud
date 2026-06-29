@@ -9,7 +9,7 @@ import {
   User,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Patient } from "@/types/patient";
+import { Gender, Patient } from "@/types/patient";
 import { deletePatientAction } from "@/lib/actions/patient.actions";
 
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,17 @@ interface PatientsTableActionsProps {
   patient: Patient;
 }
 
+function getGenderLabel(gender: Gender) {
+  switch (gender) {
+    case Gender.FEMALE:
+      return "Femenino";
+    case Gender.MALE:
+      return "Masculino";
+    default:
+      return "Otro";
+  }
+}
+
 export function PatientsTableActions({ patient }: PatientsTableActionsProps) {
   const router = useRouter();
   const [viewOpen, setViewOpen] = useState(false);
@@ -56,6 +67,7 @@ export function PatientsTableActions({ patient }: PatientsTableActionsProps) {
   async function handleDelete() {
     setIsLoading(true);
     setError(null);
+
     try {
       await deletePatientAction(patient.id);
       toast.success("Paciente eliminado correctamente");
@@ -84,7 +96,7 @@ export function PatientsTableActions({ patient }: PatientsTableActionsProps) {
             onClick={() => router.push(`/pacientes/${patient.id}`)}
           >
             <User className="mr-2 h-4 w-4 text-primary" />
-            Ir a Perfil
+            Ir a perfil
           </DropdownMenuItem>
           <DropdownMenuItem
             className="cursor-pointer"
@@ -102,7 +114,7 @@ export function PatientsTableActions({ patient }: PatientsTableActionsProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            className="text-destructive focus:bg-destructive/10 cursor-pointer"
+            className="cursor-pointer text-destructive focus:bg-destructive/10"
             onClick={() => setDeleteOpen(true)}
           >
             <Trash2 className="mr-2 h-4 w-4" />
@@ -112,50 +124,76 @@ export function PatientsTableActions({ patient }: PatientsTableActionsProps) {
       </DropdownMenu>
 
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="sm:max-w-md p-8">
+        <DialogContent className="p-8 sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl">Detalles del Paciente</DialogTitle>
+            <DialogTitle className="text-xl">Detalles del paciente</DialogTitle>
             <DialogDescription>
               Información registrada de {patient.firstName} {patient.lastName}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-muted-foreground font-medium">Documento</Label>
-              <div className="col-span-3 text-sm pl-4">{patient.document}</div>
+              <Label className="text-right font-medium text-muted-foreground">
+                Documento
+              </Label>
+              <div className="col-span-3 pl-4 text-sm">{patient.document}</div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-muted-foreground font-medium">Género</Label>
-              <div className="col-span-3 text-sm pl-4 capitalize">{patient.gender.toLowerCase()}</div>
+              <Label className="text-right font-medium text-muted-foreground">
+                Género
+              </Label>
+              <div className="col-span-3 pl-4 text-sm">
+                {getGenderLabel(patient.gender)}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-muted-foreground font-medium">Teléfono</Label>
-              <div className="col-span-3 text-sm pl-4">{patient.phone}</div>
+              <Label className="text-right font-medium text-muted-foreground">
+                Teléfono
+              </Label>
+              <div className="col-span-3 pl-4 text-sm">{patient.phone}</div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-muted-foreground font-medium">F. Nac.</Label>
-              <div className="col-span-3 text-sm pl-4">{patient.birthDate}</div>
+              <Label className="text-right font-medium text-muted-foreground">
+                F. nac.
+              </Label>
+              <div className="col-span-3 pl-4 text-sm">{patient.birthDate}</div>
             </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-muted-foreground font-medium">Dirección</Label>
-              <div className="col-span-3 text-sm pl-4">{patient.address || "—"}</div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right font-medium text-muted-foreground">
+                Dirección
+              </Label>
+              <div className="col-span-3 pl-4 text-sm">
+                {patient.address || "—"}
+              </div>
             </div>
             {patient.additionalNote && (
               <div className="grid grid-cols-4 items-start gap-4">
-                <Label className="text-right text-muted-foreground font-medium pt-0.5">Nota</Label>
-                <div className="col-span-3 text-sm pl-4 whitespace-pre-wrap">{patient.additionalNote}</div>
+                <Label className="pt-0.5 text-right font-medium text-muted-foreground">
+                  Nota
+                </Label>
+                <div className="col-span-3 whitespace-pre-wrap pl-4 text-sm">
+                  {patient.additionalNote}
+                </div>
               </div>
             )}
             {patient.allergies && (
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-semibold text-red-600 dark:text-red-400">Alergias</Label>
-                <div className="col-span-3 text-sm pl-4 text-red-600 dark:text-red-400 font-medium">{patient.allergies}</div>
+                <Label className="text-right font-semibold text-red-600 dark:text-red-400">
+                  Alergias
+                </Label>
+                <div className="col-span-3 pl-4 text-sm font-medium text-red-600 dark:text-red-400">
+                  {patient.allergies}
+                </div>
               </div>
             )}
             {patient.chronicDiseases && (
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-semibold text-red-600 dark:text-red-400">Cond. Crónicas</Label>
-                <div className="col-span-3 text-sm pl-4 text-red-600 dark:text-red-400 font-medium">{patient.chronicDiseases}</div>
+                <Label className="text-right font-semibold text-red-600 dark:text-red-400">
+                  Cond. crónicas
+                </Label>
+                <div className="col-span-3 pl-4 text-sm font-medium text-red-600 dark:text-red-400">
+                  {patient.chronicDiseases}
+                </div>
               </div>
             )}
           </div>
@@ -168,17 +206,16 @@ export function PatientsTableActions({ patient }: PatientsTableActionsProps) {
       </Dialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto p-8">
+        <DialogContent className="max-h-[90vh] overflow-y-auto p-8 sm:max-w-xl">
           <DialogHeader className="mb-4">
-            <DialogTitle className="text-2xl font-bold">Editar Paciente</DialogTitle>
+            <DialogTitle className="text-2xl font-bold">
+              Editar paciente
+            </DialogTitle>
             <DialogDescription className="text-muted-foreground">
               Modifique los datos del paciente y guarde los cambios.
             </DialogDescription>
           </DialogHeader>
-          <PatientForm
-            patient={patient}
-            onSuccess={() => setEditOpen(false)}
-          />
+          <PatientForm patient={patient} onSuccess={() => setEditOpen(false)} />
         </DialogContent>
       </Dialog>
 
@@ -187,10 +224,11 @@ export function PatientsTableActions({ patient }: PatientsTableActionsProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará permanentemente al paciente
-            "{patient.firstName} {patient.lastName}" de los registros.
-             {error && (
-                <p className="text-red-500 mt-2 font-medium">{error}</p>
+              Esta acción no se puede deshacer. Se eliminará permanentemente al
+              paciente "{patient.firstName} {patient.lastName}" de los
+              registros.
+              {error && (
+                <p className="mt-2 font-medium text-red-500">{error}</p>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>

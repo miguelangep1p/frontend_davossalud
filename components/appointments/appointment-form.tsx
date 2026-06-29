@@ -1,18 +1,24 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-
+import { toast } from "sonner";
+import * as z from "zod";
+import { createAppointmentAction, getAppointmentsListAction } from "@/lib/actions/appointment.actions";
+import { getSchedulesByStaffIdAction } from "@/lib/actions/schedule.actions";
+import { Appointment } from "@/types/appointment";
+import { Patient } from "@/types/patient";
+import { Schedule } from "@/types/schedule";
+import { Staff } from "@/types/staff";
+import { Role } from "@/types/user";
 import { Button } from "@/components/ui/button";
 import {
   Field,
+  FieldError,
   FieldGroup,
   FieldLabel,
-  FieldError,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,23 +30,17 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
-import { createAppointmentAction, getAppointmentsListAction } from "@/lib/actions/appointment.actions";
-import { getSchedulesByStaffIdAction } from "@/lib/actions/schedule.actions";
-import { Patient } from "@/types/patient";
-import { Staff } from "@/types/staff";
-import { Role } from "@/types/user";
-import { Schedule } from "@/types/schedule";
-import { Appointment } from "@/types/appointment";
-
 function timeToMins(time: string) {
-  const [h, m] = time.split(':').map(Number);
-  return h * 60 + (m || 0);
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + (minutes || 0);
 }
 
 function minsToTime(mins: number) {
-  const h = Math.floor(mins / 60).toString().padStart(2, '0');
-  const m = (mins % 60).toString().padStart(2, '0');
-  return `${h}:${m}`;
+  const hours = Math.floor(mins / 60)
+    .toString()
+    .padStart(2, "0");
+  const minutes = (mins % 60).toString().padStart(2, "0");
+  return `${hours}:${minutes}`;
 }
 
 interface Slot {
@@ -56,7 +56,7 @@ const formSchema = z
     staffId: z.string().min(1, "Seleccione un especialista"),
     date: z
       .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato inválido (YYYY-MM-DD)"),
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato invalido (YYYY-MM-DD)"),
     coordinateLater: z.boolean(),
     duration: z.string().optional(),
     startTime: z.string().optional(),
@@ -67,10 +67,11 @@ const formSchema = z
       if (!data.duration) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Seleccione la duración",
+          message: "Seleccione la duracion",
           path: ["duration"],
         });
       }
+
       if (!data.startTime || !data.scheduleId) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -93,11 +94,10 @@ export function AppointmentForm({
   onSuccess,
 }: AppointmentFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
-
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [fetchingSlots, setFetchingSlots] = useState(false);
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -116,8 +116,8 @@ export function AppointmentForm({
   const staffId = form.watch("staffId");
   const date = form.watch("date");
   const durationStr = form.watch("duration");
-  const _startTime = form.watch("startTime");
-  const _scheduleId = form.watch("scheduleId");
+  const selectedStartTime = form.watch("startTime");
+  const selectedScheduleId = form.watch("scheduleId");
 
   useEffect(() => {
     async function loadAvailability() {
@@ -126,78 +126,97 @@ export function AppointmentForm({
         setAppointments([]);
         return;
       }
-      
+
       setFetchingSlots(true);
       try {
-        const [schedRes, appRes] = await Promise.all([
+        const [schedulesResult, appointmentsResult] = await Promise.all([
           getSchedulesByStaffIdAction(staffId, date),
-          getAppointmentsListAction({ staffId, date, status: "CONFIRMED" })
+          getAppointmentsListAction({ staffId, date, status: "CONFIRMED" }),
         ]);
-        if (schedRes.success) setSchedules(schedRes.data || []);
-        if (appRes.success) setAppointments(appRes.data || []);
-        
-        // Reset selected slot if schedules change
+
+        if (schedulesResult.success) {
+          setSchedules(schedulesResult.data || []);
+        }
+
+        if (appointmentsResult.success) {
+          setAppointments(appointmentsResult.data || []);
+        }
+
         form.setValue("startTime", "");
         form.setValue("scheduleId", "");
-      } catch (error) {
-         toast.error("Error al cargar la disponibilidad");
+      } catch {
+        toast.error("Error al cargar la disponibilidad");
       } finally {
         setFetchingSlots(false);
       }
     }
 
-    loadAvailability();
+    void loadAvailability();
   }, [staffId, date, coordinateLater, form]);
 
   const availableSlotsGrouped = useMemo(() => {
-    const durationMins = parseInt(durationStr || "0");
-    if (!durationMins || schedules.length === 0) return {};
+    const durationMins = parseInt(durationStr || "0", 10);
+    if (!durationMins || schedules.length === 0) {
+      return {};
+    }
 
     const grouped: Record<string, { title: string; slots: Slot[] }> = {};
 
-    schedules.forEach(schedule => {
-       const slots: Slot[] = [];
-       let currentMins = timeToMins(schedule.startTime);
-       const endMins = timeToMins(schedule.endTime);
+    schedules.forEach((schedule) => {
+      const slots: Slot[] = [];
+      let currentMins = timeToMins(schedule.startTime);
+      const endMins = timeToMins(schedule.endTime);
 
-       while (currentMins + durationMins <= endMins) {
-          const slotStart = currentMins;
-          const slotEnd = currentMins + durationMins;
+      while (currentMins + durationMins <= endMins) {
+        const slotStart = currentMins;
+        const slotEnd = currentMins + durationMins;
 
-          const hasConflict = appointments.some(app => {
-             if (!app.startTime) return false;
-             const appStart = timeToMins(app.startTime);
-             const appEnd = app.endTime ? timeToMins(app.endTime) : appStart + (app.duration || 0);
+        const hasConflict = appointments.some((appointment) => {
+          if (!appointment.startTime) {
+            return false;
+          }
 
-             return appStart < slotEnd && appEnd > slotStart;
-          });
+          const appointmentStart = timeToMins(appointment.startTime);
+          const appointmentEnd = appointment.endTime
+            ? timeToMins(appointment.endTime)
+            : appointmentStart + (appointment.duration || 0);
 
-          slots.push({
-             startTime: minsToTime(slotStart),
-             endTime: minsToTime(slotEnd),
-             scheduleId: schedule.id,
-             available: !hasConflict
-          });
+          return appointmentStart < slotEnd && appointmentEnd > slotStart;
+        });
 
-          // advance 30 mins
-          currentMins += 30;
-       }
-       
-       if (slots.length > 0) {
-         grouped[schedule.id] = {
-            title: `Turno ${schedule.startTime} - ${schedule.endTime}`,
-            slots
-         };
-       }
+        slots.push({
+          startTime: minsToTime(slotStart),
+          endTime: minsToTime(slotEnd),
+          scheduleId: schedule.id,
+          available: !hasConflict,
+        });
+
+        currentMins += 30;
+      }
+
+      if (slots.length > 0) {
+        grouped[schedule.id] = {
+          title: `Turno ${schedule.startTime} - ${schedule.endTime}`,
+          slots,
+        };
+      }
     });
 
     return grouped;
-  }, [schedules, appointments, durationStr]);
+  }, [appointments, durationStr, schedules]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+
     try {
-      const payload: any = {
+      const payload: {
+        patientId: string;
+        staffId: string;
+        date: string;
+        startTime?: string;
+        duration?: number;
+        scheduleId?: string;
+      } = {
         patientId: values.patientId,
         staffId: values.staffId,
         date: values.date,
@@ -205,7 +224,7 @@ export function AppointmentForm({
 
       if (!values.coordinateLater) {
         payload.startTime = values.startTime;
-        payload.duration = parseInt(values.duration || "0");
+        payload.duration = parseInt(values.duration || "0", 10);
         payload.scheduleId = values.scheduleId;
       }
 
@@ -217,125 +236,124 @@ export function AppointmentForm({
       } else {
         router.push("/citas");
       }
-    } catch (error: any) {
-      toast.error(error.message || "Error al procesar la solicitud");
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Error al procesar la solicitud",
+      );
     } finally {
       setIsLoading(false);
     }
   }
 
-  const durationOptions = Array.from({ length: 8 }, (_, i) => (i + 1) * 30);
+  const durationOptions = Array.from({ length: 8 }, (_, index) => (index + 1) * 30);
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
       <FieldGroup>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Controller
             name="patientId"
             control={form.control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor={field.name}>Paciente</FieldLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value || ""}
-                >
+                <Select onValueChange={field.onChange} value={field.value || ""}>
                   <SelectTrigger id={field.name}>
                     <SelectValue placeholder="Seleccione un paciente" />
                   </SelectTrigger>
                   <SelectContent>
-                    {patients.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.firstName} {p.lastName} - {p.document}
+                    {patients.map((patient) => (
+                      <SelectItem key={patient.id} value={patient.id}>
+                        {patient.firstName} {patient.lastName} - {patient.document}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {fieldState.invalid && (
+                {fieldState.invalid ? (
                   <FieldError errors={[fieldState.error]} />
-                )}
+                ) : null}
               </Field>
             )}
           />
+
           <Controller
             name="staffId"
             control={form.control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor={field.name}>Especialista</FieldLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value || ""}
-                >
+                <Select onValueChange={field.onChange} value={field.value || ""}>
                   <SelectTrigger id={field.name}>
                     <SelectValue placeholder="Seleccione especialista" />
                   </SelectTrigger>
                   <SelectContent>
                     {staffMembers
-                      .filter((s) => s.user.roles.includes(Role.DOCTOR))
-                      .map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.user.firstName} {s.user.lastName}
+                      .filter((staff) => staff.user.roles.includes(Role.DOCTOR))
+                      .map((staff) => (
+                        <SelectItem key={staff.id} value={staff.id}>
+                          {staff.user.firstName} {staff.user.lastName}
                         </SelectItem>
                       ))}
                   </SelectContent>
                 </Select>
-                {fieldState.invalid && (
+                {fieldState.invalid ? (
                   <FieldError errors={[fieldState.error]} />
-                )}
+                ) : null}
               </Field>
             )}
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Controller
             name="date"
             control={form.control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor={field.name}>Fecha de la Cita</FieldLabel>
+                <FieldLabel htmlFor={field.name}>Fecha de la cita</FieldLabel>
                 <Input {...field} id={field.name} type="date" />
-                {fieldState.invalid && (
+                {fieldState.invalid ? (
                   <FieldError errors={[fieldState.error]} />
-                )}
+                ) : null}
               </Field>
             )}
           />
 
-          {!coordinateLater && (
+          {!coordinateLater ? (
             <Controller
               name="duration"
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={field.name}>Duración</FieldLabel>
+                  <FieldLabel htmlFor={field.name}>Duracion</FieldLabel>
                   <Select
-                    onValueChange={(val) => {
-                      field.onChange(val);
+                    onValueChange={(value) => {
+                      field.onChange(value);
                       form.setValue("startTime", "");
                       form.setValue("scheduleId", "");
                     }}
                     value={field.value || ""}
                   >
                     <SelectTrigger id={field.name}>
-                      <SelectValue placeholder="Seleccione duración" />
+                      <SelectValue placeholder="Seleccione duracion" />
                     </SelectTrigger>
                     <SelectContent>
-                      {durationOptions.map((dur) => (
-                        <SelectItem key={dur} value={dur.toString()}>
-                          {dur} minutos ({dur / 60} horas)
+                      {durationOptions.map((duration) => (
+                        <SelectItem key={duration} value={duration.toString()}>
+                          {duration} minutos ({duration / 60} horas)
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {fieldState.invalid && (
+                  {fieldState.invalid ? (
                     <FieldError errors={[fieldState.error]} />
-                  )}
+                  ) : null}
                 </Field>
               )}
             />
-          )}
+          ) : null}
         </div>
 
         <div className="py-4">
@@ -347,76 +365,80 @@ export function AppointmentForm({
                 <Switch
                   id={field.name}
                   checked={field.value}
-                  onCheckedChange={(val) => {
-                    field.onChange(val);
-                    if (val) {
+                  onCheckedChange={(value) => {
+                    field.onChange(value);
+                    if (value) {
                       form.setValue("startTime", "");
                       form.setValue("duration", "");
                       form.setValue("scheduleId", "");
                     }
                   }}
                 />
-                <FieldLabel
-                  htmlFor={field.name}
-                  className="cursor-pointer mb-0"
-                >
-                  Coordinar hora después
+                <FieldLabel htmlFor={field.name} className="mb-0 cursor-pointer">
+                  Coordinar hora despues
                 </FieldLabel>
               </div>
             )}
           />
         </div>
 
-        {!coordinateLater && staffId && date && durationStr && (
-           <div className="mt-6 border-t pt-4">
-              <h3 className="text-lg font-medium mb-4">Selección de Horario</h3>
-              {fetchingSlots ? (
-                 <p className="text-sm text-gray-500">Cargando disponibilidad...</p>
-              ) : Object.keys(availableSlotsGrouped).length === 0 ? (
-                 <p className="text-sm text-amber-600">No hay turnos disponibles para esta fecha o la duración excede los bloques libres.</p>
-              ) : (
-                <div className="space-y-6">
-                  {Object.entries(availableSlotsGrouped).map(([schId, group]) => (
-                    <div key={schId} className="space-y-2">
-                      <h4 className="text-sm font-semibold text-gray-700">{group.title}</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {group.slots.map((slot) => {
-                          const isSelected = _startTime === slot.startTime && _scheduleId === slot.scheduleId;
-                          
-                          return (
-                            <button
-                              key={`${slot.startTime}-${slot.endTime}`}
-                              type="button"
-                              disabled={!slot.available}
-                              onClick={() => {
-                                form.setValue("startTime", slot.startTime);
-                                form.setValue("scheduleId", slot.scheduleId);
-                                form.clearErrors("startTime");
-                              }}
-                              className={`px-3 py-2 text-sm rounded-md border transition-colors ${
-                                !slot.available 
-                                  ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                                  : isSelected
-                                    ? "bg-primary text-primary-foreground border-primary"
-                                    : "bg-white text-gray-700 border-gray-300 hover:border-primary hover:text-primary"
-                              }`}
-                            >
-                              {slot.startTime} - {slot.endTime}
-                            </button>
-                          );
-                        })}
-                      </div>
+        {!coordinateLater && staffId && date && durationStr ? (
+          <div className="mt-6 border-t pt-4">
+            <h3 className="mb-4 text-lg font-medium">Seleccion de horario</h3>
+            {fetchingSlots ? (
+              <p className="text-sm text-gray-500">Cargando disponibilidad...</p>
+            ) : Object.keys(availableSlotsGrouped).length === 0 ? (
+              <p className="text-sm text-amber-600">
+                No hay turnos disponibles para esta fecha o la duracion excede los bloques libres.
+              </p>
+            ) : (
+              <div className="space-y-6">
+                {Object.entries(availableSlotsGrouped).map(([scheduleKey, group]) => (
+                  <div key={scheduleKey} className="space-y-2">
+                    <h4 className="text-sm font-semibold text-gray-700">
+                      {group.title}
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {group.slots.map((slot) => {
+                        const isSelected =
+                          selectedStartTime === slot.startTime &&
+                          selectedScheduleId === slot.scheduleId;
+
+                        return (
+                          <button
+                            key={`${slot.startTime}-${slot.endTime}`}
+                            type="button"
+                            disabled={!slot.available}
+                            onClick={() => {
+                              form.setValue("startTime", slot.startTime);
+                              form.setValue("scheduleId", slot.scheduleId);
+                              form.clearErrors("startTime");
+                            }}
+                            className={`rounded-md border px-3 py-2 text-sm transition-colors ${
+                              !slot.available
+                                ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400"
+                                : isSelected
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : "border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary"
+                            }`}
+                          >
+                            {slot.startTime} - {slot.endTime}
+                          </button>
+                        );
+                      })}
                     </div>
-                  ))}
-                  {form.formState.errors.startTime && (
-                    <p className="text-sm font-medium text-destructive mt-2">
-                       {form.formState.errors.startTime.message}
-                    </p>
-                  )}
-                </div>
-              )}
-           </div>
-        )}
+                  </div>
+                ))}
+
+                {form.formState.errors.startTime ? (
+                  <p className="mt-2 text-sm font-medium text-destructive">
+                    {form.formState.errors.startTime.message}
+                  </p>
+                ) : null}
+              </div>
+            )}
+          </div>
+        ) : null}
       </FieldGroup>
 
       <div className="flex justify-end pt-4">
@@ -430,7 +452,7 @@ export function AppointmentForm({
           Cancelar
         </Button>
         <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Guardando..." : "Agendar Cita"}
+          {isLoading ? "Guardando..." : "Agendar cita"}
         </Button>
       </div>
     </form>
