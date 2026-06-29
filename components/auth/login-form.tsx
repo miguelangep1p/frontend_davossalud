@@ -37,25 +37,25 @@ export function LoginForm() {
   }
 
   return (
-    <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-      <section className="relative overflow-hidden rounded-[2rem] border border-rose-100/80 bg-[radial-gradient(circle_at_top_left,rgba(244,114,182,0.28),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(251,207,232,0.38),transparent_40%),linear-gradient(135deg,#fffdfd_0%,#fff4f8_48%,#ffffff_100%)] p-8 shadow-[0_32px_80px_rgba(136,19,55,0.12)] lg:p-12">
+    <div className="mx-auto grid w-full max-w-6xl items-center gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8">
+      <section className="relative overflow-hidden rounded-[2rem] border border-rose-100/80 bg-[radial-gradient(circle_at_top_left,rgba(244,114,182,0.28),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(251,207,232,0.38),transparent_40%),linear-gradient(135deg,#fffdfd_0%,#fff4f8_48%,#ffffff_100%)] p-6 shadow-[0_32px_80px_rgba(136,19,55,0.12)] sm:p-8 lg:p-12">
         <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_center,rgba(251,207,232,0.34),transparent_58%)] lg:block" />
-        <div className="relative z-10 space-y-8">
+        <div className="relative z-10 space-y-6 lg:space-y-8">
           <SystemBrand href="" />
           <div className="max-w-xl space-y-4">
             <span className="inline-flex rounded-full border border-rose-200 bg-white/90 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-rose-700">
               Plataforma administrativa
             </span>
-            <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 lg:text-5xl">
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
               Operación médica, historia clínica y atención en un solo sistema.
             </h1>
-            <p className="max-w-lg text-base leading-7 text-slate-600">
+            <p className="max-w-lg text-sm leading-7 text-slate-600 sm:text-base">
               Davos Salud centraliza pacientes, personal, citas y registros
               clínicos con un flujo diseñado para consulta diaria.
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {[
               {
                 icon: ShieldCheck,
@@ -88,8 +88,8 @@ export function LoginForm() {
         </div>
       </section>
 
-      <Card className="border-rose-100/80 bg-white/95 shadow-[0_32px_80px_rgba(136,19,55,0.14)] backdrop-blur">
-        <CardContent className="p-8 lg:p-10">
+      <Card className="mx-auto w-full max-w-xl border-rose-100/80 bg-white/95 shadow-[0_32px_80px_rgba(136,19,55,0.14)] backdrop-blur">
+        <CardContent className="p-6 sm:p-8 lg:p-10">
           <div className="mb-8 space-y-2">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-rose-700">
               Acceso del sistema
