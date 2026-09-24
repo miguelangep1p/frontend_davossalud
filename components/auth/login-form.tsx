@@ -1,24 +1,41 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, ShieldCheck, Stethoscope, UserRound } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent } from '@/components/ui/card'
 import { login } from '@/lib/actions/auth.actions'
-import { SystemBrand } from '@/components/brand/system-brand'
-import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
+
+type FieldErrors = { email?: string; password?: string }
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'No se pudo iniciar sesión'
 }
 
+function validate(email: string, password: string): FieldErrors {
+  const errors: FieldErrors = {}
+  if (!email.trim()) errors.email = 'Ingresa tu correo'
+  else if (!EMAIL_PATTERN.test(email.trim())) errors.email = 'Revisa el formato del correo'
+  if (!password) errors.password = 'Ingresa tu contraseña'
+  return errors
+}
+
+const inputClass =
+  'h-11 rounded-xl border-slate-200 bg-white pl-10 text-sm placeholder:text-slate-400 focus-visible:border-rose-300 focus-visible:ring-rose-100'
+
 export function LoginForm() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [capsLock, setCapsLock] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -26,137 +43,142 @@ export function LoginForm() {
     e.preventDefault()
     setError('')
 
-    if (!email.trim()) {
-      toast.error('Escribe tu correo electrónico')
-      return
-    }
-
-    if (!password) {
-      toast.error('Escribe tu contraseña')
-      return
-    }
+    const errors = validate(email, password)
+    setFieldErrors(errors)
+    if (errors.email || errors.password) return
 
     setLoading(true)
-
     try {
-      await login({ email, password })
+      await login({ email: email.trim(), password })
       router.push('/dashboard')
     } catch (err: unknown) {
-      const message = getErrorMessage(err)
-      setError(message)
-      toast.error('No se pudo iniciar sesión', { description: message })
-    } finally {
+      setError(getErrorMessage(err))
       setLoading(false)
     }
   }
 
+  function handlePasswordKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    setCapsLock(e.getModifierState('CapsLock'))
+  }
+
   return (
-    <div className="mx-auto grid w-full max-w-6xl items-center gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8">
-      <section className="relative overflow-hidden rounded-[2rem] border border-rose-100/80 bg-[radial-gradient(circle_at_top_left,rgba(244,114,182,0.28),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(251,207,232,0.38),transparent_40%),linear-gradient(135deg,#fffdfd_0%,#fff4f8_48%,#ffffff_100%)] p-6 shadow-[0_32px_80px_rgba(136,19,55,0.12)] sm:p-8 lg:p-12">
-        <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_center,rgba(251,207,232,0.34),transparent_58%)] lg:block" />
-        <div className="relative z-10 space-y-6 lg:space-y-8">
-          <SystemBrand href="" />
-          <div className="max-w-xl space-y-4">
-            <span className="inline-flex rounded-full border border-rose-200 bg-white/90 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-rose-700">
-              Plataforma administrativa
-            </span>
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
-              Operación médica, historia clínica y atención en un solo sistema.
-            </h1>
-            <p className="max-w-lg text-sm leading-7 text-slate-600 sm:text-base">
-              Davos Salud centraliza pacientes, personal, citas y registros
-              clínicos con un flujo diseñado para consulta diaria.
-            </p>
-          </div>
+    <div className="mx-auto w-full max-w-sm">
+      <div className="mb-8 flex flex-col items-center text-center">
+        <Image
+          src="/davos-salud-logo.jpeg"
+          alt="Davos Salud"
+          width={72}
+          height={56}
+          className="mb-4 h-14 w-[72px] rounded-xl object-cover"
+          priority
+        />
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          Bienvenido
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Inicia sesión para continuar
+        </p>
+      </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {[
-              {
-                icon: ShieldCheck,
-                title: 'Acceso seguro',
-                description: 'Sesiones protegidas y control por roles.',
-              },
-              {
-                icon: Stethoscope,
-                title: 'Consulta clínica',
-                description: 'Registros, imágenes y seguimiento por paciente.',
-              },
-              {
-                icon: UserRound,
-                title: 'Equipo centralizado',
-                description: 'Usuarios, personal y agenda en una sola vista.',
-              },
-            ].map((item) => (
-              <div
-                key={item.title}
-                className="rounded-2xl border border-rose-100/80 bg-white/80 p-4 backdrop-blur"
-              >
-                <item.icon className="mb-3 size-5 text-rose-600" />
-                <h3 className="font-semibold text-slate-900">{item.title}</h3>
-                <p className="mt-1 text-sm leading-6 text-slate-600">
-                  {item.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <Card className="mx-auto w-full max-w-xl border-rose-100/80 bg-white/95 shadow-[0_32px_80px_rgba(136,19,55,0.14)] backdrop-blur">
-        <CardContent className="p-6 sm:p-8 lg:p-10">
-          <div className="mb-8 space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-rose-700">
-              Acceso del sistema
-            </p>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900">
-              Iniciar sesión
-            </h2>
-            <p className="text-sm leading-6 text-slate-500">
-              Ingrese sus credenciales para continuar con la operación diaria.
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="email">Correo electrónico</Label>
+      <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_20px_50px_rgba(136,19,55,0.08)] sm:p-8">
+        <form onSubmit={handleSubmit} noValidate className="space-y-5">
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Correo</Label>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-slate-400" />
               <Input
                 id="email"
                 type="email"
+                inputMode="email"
+                autoComplete="email"
+                autoFocus
                 value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                className="h-12 border-rose-100 bg-white focus-visible:border-rose-300 focus-visible:ring-rose-200"
-                placeholder="doctor@davossalud.com"
+                onChange={e => {
+                  setEmail(e.target.value)
+                  if (fieldErrors.email) setFieldErrors(f => ({ ...f, email: undefined }))
+                }}
+                aria-invalid={!!fieldErrors.email}
+                aria-describedby={fieldErrors.email ? 'email-error' : undefined}
+                className={inputClass}
+                placeholder="tucorreo@ejemplo.com"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
+            {fieldErrors.email ? (
+              <p id="email-error" className="text-xs text-rose-600">
+                {fieldErrors.email}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="password">Contraseña</Label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-slate-400" />
               <Input
                 id="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                className="h-12 border-rose-100 bg-white focus-visible:border-rose-300 focus-visible:ring-rose-200"
-                placeholder="••••••••"
+                onChange={e => {
+                  setPassword(e.target.value)
+                  if (fieldErrors.password) setFieldErrors(f => ({ ...f, password: undefined }))
+                }}
+                onKeyUp={handlePasswordKey}
+                onKeyDown={handlePasswordKey}
+                onBlur={() => setCapsLock(false)}
+                aria-invalid={!!fieldErrors.password}
+                aria-describedby={fieldErrors.password ? 'password-error' : undefined}
+                className={cn(inputClass, 'pr-11')}
+                placeholder="Tu contraseña"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute top-1/2 right-1.5 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-rose-200 focus-visible:outline-none"
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                aria-pressed={showPassword}
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
             </div>
-            {error ? (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                {error}
-              </div>
+            {fieldErrors.password ? (
+              <p id="password-error" className="text-xs text-rose-600">
+                {fieldErrors.password}
+              </p>
+            ) : capsLock ? (
+              <p className="text-xs text-amber-600">Bloq Mayús está activado</p>
             ) : null}
-            <Button
-              type="submit"
-              className="h-12 w-full justify-between rounded-xl bg-rose-600 px-5 text-base hover:bg-rose-700"
-              disabled={loading}
+          </div>
+
+          {error ? (
+            <div
+              role="alert"
+              className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-700"
             >
-              <span>{loading ? 'Ingresando...' : 'Entrar a Davos Salud'}</span>
-              <ArrowRight className="size-4" />
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              {error}
+            </div>
+          ) : null}
+
+          <Button
+            type="submit"
+            className="h-11 w-full rounded-xl bg-rose-600 text-sm font-semibold hover:bg-rose-700"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Ingresando…
+              </>
+            ) : (
+              'Iniciar sesión'
+            )}
+          </Button>
+        </form>
+      </div>
+
+      <p className="mt-6 text-center text-xs text-slate-400">
+        © {new Date().getFullYear()} Davos Salud
+      </p>
     </div>
   )
 }
