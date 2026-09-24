@@ -24,14 +24,14 @@ export function AddTreatmentButton() {
           Agregar
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] p-8">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Registro de Tratamiento</DialogTitle>
           <DialogDescription>
             Complete los datos para registrar un nuevo tratamiento.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
+        <div>
           <TreatmentForm onSuccess={() => setOpen(false)} />
         </div>
       </DialogContent>

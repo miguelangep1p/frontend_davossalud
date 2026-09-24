@@ -24,9 +24,9 @@ export function MedicalRecordNewDialog() {
           Nueva Consulta
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-8">
-        <DialogHeader className="mb-4">
-          <DialogTitle className="text-2xl font-bold">Registrar Consulta</DialogTitle>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Registrar Consulta</DialogTitle>
           <DialogDescription>
             Complete los datos de la historia clínica del paciente.
           </DialogDescription>

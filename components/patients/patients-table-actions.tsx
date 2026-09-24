@@ -124,9 +124,9 @@ export function PatientsTableActions({ patient }: PatientsTableActionsProps) {
       </DropdownMenu>
 
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="p-8 sm:max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl">Detalles del paciente</DialogTitle>
+            <DialogTitle>Detalles del paciente</DialogTitle>
             <DialogDescription>
               Información registrada de {patient.firstName} {patient.lastName}
             </DialogDescription>
@@ -206,9 +206,9 @@ export function PatientsTableActions({ patient }: PatientsTableActionsProps) {
       </Dialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto p-8 sm:max-w-xl">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="text-2xl font-bold">
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>
               Editar paciente
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">

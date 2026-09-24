@@ -95,7 +95,7 @@ export function CashEntryTableActions({ entry }: Props) {
       </DropdownMenu>
 
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="sm:max-w-md p-8">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Detalle del Movimiento</DialogTitle>
             <DialogDescription>{entry.date} — {entry.concept}</DialogDescription>
@@ -137,9 +137,9 @@ export function CashEntryTableActions({ entry }: Props) {
       </Dialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-lg p-8">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="text-xl font-bold">Editar Movimiento</DialogTitle>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar Movimiento</DialogTitle>
           </DialogHeader>
           <CashEntryForm entry={entry} onSuccess={() => setEditOpen(false)} />
         </DialogContent>

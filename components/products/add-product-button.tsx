@@ -24,14 +24,14 @@ export function AddProductButton() {
           Agregar
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] p-8">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Registro de Producto</DialogTitle>
           <DialogDescription>
             Complete los datos para registrar un nuevo producto.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
+        <div>
           <ProductForm onSuccess={() => setOpen(false)} />
         </div>
       </DialogContent>

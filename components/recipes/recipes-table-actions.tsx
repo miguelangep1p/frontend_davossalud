@@ -108,7 +108,7 @@ export function RecipesTableActions({ recipe }: RecipesTableActionsProps) {
       </DropdownMenu>
 
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="sm:max-w-3xl p-8 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Resumen de receta</DialogTitle>
             <DialogDescription>

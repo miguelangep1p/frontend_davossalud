@@ -89,7 +89,7 @@ export function AddScheduleButton({ staffId }: { staffId: string }) {
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md p-8">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Registrar Nuevo Turno</DialogTitle>
             <DialogDescription>

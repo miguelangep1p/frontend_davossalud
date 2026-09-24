@@ -24,14 +24,14 @@ export function AddStaffButton() {
           Agregar
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] p-8">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Registrar Nuevo Personal</DialogTitle>
           <DialogDescription>
             Complete los datos para vincular un usuario como miembro del personal.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
+        <div>
           <StaffForm onSuccess={() => setOpen(false)} />
         </div>
       </DialogContent>

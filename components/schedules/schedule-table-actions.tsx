@@ -163,7 +163,7 @@ export function ScheduleTableActions({ schedule }: { schedule: Schedule }) {
       </DropdownMenu>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-md p-8">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Turno</DialogTitle>
             <DialogDescription>

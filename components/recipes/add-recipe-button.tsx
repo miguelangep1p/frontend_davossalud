@@ -34,7 +34,7 @@ export function AddRecipeButton({
           Nueva Receta
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-5xl p-8 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>Receta guiada</DialogTitle>
           <DialogDescription>

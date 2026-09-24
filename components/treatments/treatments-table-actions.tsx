@@ -90,9 +90,9 @@ export function TreatmentsTableActions({
       </DropdownMenu>
 
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="sm:max-w-md p-8">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl">Detalles del Tratamiento</DialogTitle>
+            <DialogTitle>Detalles del Tratamiento</DialogTitle>
             <DialogDescription>{treatment.name}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -140,9 +140,9 @@ export function TreatmentsTableActions({
       </Dialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-xl p-8">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="text-2xl font-bold">Editar Tratamiento</DialogTitle>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Editar Tratamiento</DialogTitle>
             <DialogDescription>
               Modifique los datos del tratamiento y guarde los cambios.
             </DialogDescription>

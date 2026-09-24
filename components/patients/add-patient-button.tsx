@@ -24,14 +24,14 @@ export function AddPatientButton() {
           Agregar
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] p-8">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Registro de Paciente</DialogTitle>
           <DialogDescription>
             Complete los datos para registrar un nuevo paciente.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
+        <div>
           <PatientForm onSuccess={() => setOpen(false)} />
         </div>
       </DialogContent>

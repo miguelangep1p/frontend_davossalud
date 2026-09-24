@@ -99,7 +99,7 @@ export function UserTableActions({ user }: UserRowActionsProps) {
       </DropdownMenu>
 
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="sm:max-w-md p-8">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Detalles del Usuario</DialogTitle>
             <DialogDescription>
@@ -141,7 +141,7 @@ export function UserTableActions({ user }: UserRowActionsProps) {
       </Dialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-[600px] p-8">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Editar Usuario</DialogTitle>
             <DialogDescription>
@@ -149,7 +149,7 @@ export function UserTableActions({ user }: UserRowActionsProps) {
               por seguridad.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div>
             <UserForm initialData={user} onSuccess={() => setEditOpen(false)} />
           </div>
         </DialogContent>

@@ -108,9 +108,9 @@ export function AppointmentsTableActions({
       </DropdownMenu>
 
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="p-8 sm:max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl">Detalles de la cita</DialogTitle>
+            <DialogTitle>Detalles de la cita</DialogTitle>
             <DialogDescription>
               Informacion de la cita del {appointment.date}
             </DialogDescription>

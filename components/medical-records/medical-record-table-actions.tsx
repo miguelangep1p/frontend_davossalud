@@ -106,9 +106,9 @@ export function MedicalRecordTableActions({ record }: Props) {
       </DropdownMenu>
 
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto p-8 sm:max-w-3xl">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle className="text-xl">Historia clínica</DialogTitle>
+            <DialogTitle>Historia clínica</DialogTitle>
             <DialogDescription>
               {record.date} ·{" "}
               {record.patient
@@ -202,9 +202,9 @@ export function MedicalRecordTableActions({ record }: Props) {
       </Dialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto p-8 sm:max-w-3xl">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="text-xl font-bold">
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
               Editar historia clínica
             </DialogTitle>
             <DialogDescription>

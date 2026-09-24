@@ -88,9 +88,9 @@ export function ProductsTableActions({ product }: ProductsTableActionsProps) {
       </DropdownMenu>
 
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="sm:max-w-md p-8">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl">Detalles del Producto</DialogTitle>
+            <DialogTitle>Detalles del Producto</DialogTitle>
             <DialogDescription>{product.name}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -140,9 +140,9 @@ export function ProductsTableActions({ product }: ProductsTableActionsProps) {
       </Dialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-xl p-8">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="text-2xl font-bold">Editar Producto</DialogTitle>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Editar Producto</DialogTitle>
             <DialogDescription>
               Modifique los datos del producto y guarde los cambios.
             </DialogDescription>

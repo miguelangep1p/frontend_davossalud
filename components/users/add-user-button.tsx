@@ -24,14 +24,14 @@ export function AddUserButton() {
           Agregar
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] p-8">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Registrar Nuevo Usuario</DialogTitle>
           <DialogDescription>
             Complete los datos para crear un usuario.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
+        <div>
           <UserForm onSuccess={() => setOpen(false)} />
         </div>
       </DialogContent>

@@ -161,7 +161,7 @@ export function StaffTableActions({ staff }: StaffRowActionsProps) {
       </DropdownMenu>
 
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="sm:max-w-md p-8">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Detalles del Personal</DialogTitle>
             <DialogDescription>
@@ -207,7 +207,7 @@ export function StaffTableActions({ staff }: StaffRowActionsProps) {
       </Dialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-md p-8">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Perfil</DialogTitle>
             <DialogDescription>

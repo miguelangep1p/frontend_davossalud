@@ -24,9 +24,9 @@ export function CashNewDialog() {
           Nuevo Movimiento
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg p-8">
-        <DialogHeader className="mb-4">
-          <DialogTitle className="text-2xl font-bold">Registrar Movimiento</DialogTitle>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Registrar Movimiento</DialogTitle>
           <DialogDescription>
             Ingrese los datos del ingreso o egreso de caja.
           </DialogDescription>
