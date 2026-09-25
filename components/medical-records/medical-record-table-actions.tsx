@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { MoreHorizontal, Eye, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Eye, FilePlus2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { unwrapAction } from "@/lib/action-result";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { MedicalRecord } from "@/types/medical-record";
 import { MedicalRecordForm } from "./medical-record-form";
+import { MedicalRecordRecipes } from "./medical-record-recipes";
 import { deleteMedicalRecordAction } from "@/lib/actions/medical-record.actions";
 
 function getErrorMessage(error: unknown) {
@@ -46,6 +47,7 @@ interface Props {
 export function MedicalRecordTableActions({ record }: Props) {
   const [viewOpen, setViewOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [recipeOpen, setRecipeOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -92,6 +94,9 @@ export function MedicalRecordTableActions({ record }: Props) {
           <DropdownMenuSeparator />
           <DropdownMenuItem className="cursor-pointer" onClick={() => setViewOpen(true)}>
             <Eye className="mr-2 h-4 w-4" /> Ver detalle
+          </DropdownMenuItem>
+          <DropdownMenuItem className="cursor-pointer" onClick={() => setRecipeOpen(true)}>
+            <FilePlus2 className="mr-2 h-4 w-4" /> Hacer receta
           </DropdownMenuItem>
           <DropdownMenuItem className="cursor-pointer" onClick={() => setEditOpen(true)}>
             <Pencil className="mr-2 h-4 w-4" /> Editar
@@ -193,12 +198,34 @@ export function MedicalRecordTableActions({ record }: Props) {
                 </div>
               </div>
             ) : null}
+
+            <div className="border-t pt-5">
+              <MedicalRecordRecipes record={record} />
+            </div>
           </div>
           <div className="flex justify-end">
             <Button variant="outline" onClick={() => setViewOpen(false)}>
               Cerrar
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={recipeOpen} onOpenChange={setRecipeOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Receta</DialogTitle>
+            <DialogDescription>
+              {record.patient
+                ? `${record.patient.firstName} ${record.patient.lastName}`
+                : "Paciente"}
+              {record.staff?.user
+                ? ` · Dr. ${record.staff.user.firstName} ${record.staff.user.lastName}`
+                : ""}
+              {` · ${record.date}`}
+            </DialogDescription>
+          </DialogHeader>
+          {recipeOpen ? <MedicalRecordRecipes record={record} startCreating /> : null}
         </DialogContent>
       </Dialog>
 

@@ -2,8 +2,14 @@ import { CreateRecipeDto, Recipe } from "@/types/recipe";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-export async function getRecipesList(token: string): Promise<Recipe[]> {
-  const response = await fetch(`${BASE_URL}/recipes`, {
+export async function getRecipesList(
+  token: string,
+  params?: { medicalRecordId?: string },
+): Promise<Recipe[]> {
+  const query = params?.medicalRecordId
+    ? `?medicalRecordId=${encodeURIComponent(params.medicalRecordId)}`
+    : "";
+  const response = await fetch(`${BASE_URL}/recipes${query}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",

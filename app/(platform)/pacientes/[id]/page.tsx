@@ -401,12 +401,12 @@ export default async function PatientProfilePage({
           <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-xl border bg-card text-muted-foreground">
             <FileText className="h-8 w-8 opacity-40" />
             <p className="text-sm">
-              Revisa las recetas desde{" "}
+              Las recetas se hacen y se consultan desde la{" "}
               <Link
-                href="/recetas"
+                href="/historia-clinica"
                 className="font-medium text-primary underline underline-offset-2"
               >
-                Recetas médicas
+                Historia clínica
               </Link>
               .
             </p>

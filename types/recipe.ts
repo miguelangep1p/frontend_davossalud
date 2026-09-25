@@ -17,6 +17,7 @@ export interface Recipe {
   patient: Patient;
   staffId: string;
   staff: Staff;
+  medicalRecordId?: string | null;
   prescribedAt: string;
   diagnosis: string;
   notes?: string;
@@ -37,6 +38,7 @@ export interface CreateRecipeItemDto {
 export interface CreateRecipeDto {
   patientId: string;
   staffId: string;
+  medicalRecordId?: string;
   prescribedAt: string;
   diagnosis: string;
   notes?: string;

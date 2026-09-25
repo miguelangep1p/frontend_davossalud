@@ -6,7 +6,6 @@ import {
   CalendarCheck,
   ChevronsUpDown,
   ClipboardList,
-  FileText,
   LayoutDashboard,
   LogOut,
   Sparkles,
@@ -64,7 +63,6 @@ const quickLinks: NavItem[] = [
 
 const clinicalLinks: NavItem[] = [
   { title: "Historia clínica", url: "/historia-clinica", icon: ClipboardList },
-  { title: "Recetas", url: "/recetas", icon: FileText },
   { title: "Tratamientos", url: "/tratamientos", icon: Sparkles },
   {
     title: "Drive clínico",
