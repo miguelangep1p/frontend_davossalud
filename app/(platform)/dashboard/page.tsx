@@ -155,10 +155,7 @@ export default async function DashboardPage() {
             ))}
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-base font-semibold text-foreground">
-              Agenda de citas
-            </h2>
+          <section className="min-w-0">
             <AppointmentsCalendarBoard
               currentUser={currentUser}
               staffMembers={staffMembers}
