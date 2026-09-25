@@ -104,7 +104,11 @@ export function RecipeCard({ recipe, onDeleted }: RecipeCardProps) {
             <span className="font-semibold text-primary">{index + 1}.</span>
             <div className="min-w-0">
               <p className="font-medium">
-                {item.medicine} <span className="font-normal text-muted-foreground">· {item.presentation}</span>
+                {item.medicine}{" "}
+                <span className="font-normal text-muted-foreground">
+                  · {item.presentation}
+                  {item.quantity ? ` · Cant. ${item.quantity}` : ""}
+                </span>
               </p>
               <p className="text-xs text-muted-foreground">
                 {item.dosage} · {item.frequency} · {item.duration}

@@ -5,6 +5,7 @@ export interface RecipeItem {
   id: string;
   medicine: string;
   presentation: string;
+  quantity?: string | null;
   dosage: string;
   frequency: string;
   duration: string;
@@ -29,6 +30,7 @@ export interface Recipe {
 export interface CreateRecipeItemDto {
   medicine: string;
   presentation: string;
+  quantity?: string;
   dosage: string;
   frequency: string;
   duration: string;

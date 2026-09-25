@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { ImagePlus, Loader2, Trash2 } from "lucide-react";
+import { ImagePlus, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { unwrapAction } from "@/lib/action-result";
 import { showFormErrors } from "@/lib/form-notifications";
@@ -25,11 +25,18 @@ import {
   updateMedicalRecordAction,
 } from "@/lib/actions/medical-record.actions";
 import { getPatientsAction } from "@/lib/actions/patient.actions";
+import { createRecipeAction } from "@/lib/actions/recipe.actions";
 import { getStaffListAction } from "@/lib/actions/staff.actions";
 import { uploadImageFile } from "@/lib/client-upload";
 import { MedicalRecord } from "@/types/medical-record";
 import { Patient } from "@/types/patient";
 import { Staff } from "@/types/staff";
+import {
+  buildTreatmentFromItems,
+  MedicalRecordPrescription,
+  PrescriptionItemValues,
+} from "./medical-record-prescription";
+import { MedicalRecordRecipes } from "./medical-record-recipes";
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Ocurrió un error inesperado.";
@@ -58,6 +65,18 @@ const schema = z.object({
   bloodPressure: z.string().optional(),
   temperature: optionalNumber(30, 45, "La temperatura debe estar entre 30 y 45 °C"),
   heartRate: optionalNumber(0, 300, "La frecuencia debe estar entre 0 y 300"),
+  recipeItems: z.array(
+    z.object({
+      medicine: z.string().trim().min(1, "Escribe el medicamento"),
+      presentation: z.string().trim().min(1, "Escribe la presentación"),
+      quantity: z.string().max(60, "Máximo 60 caracteres"),
+      dosage: z.string().trim().min(1, "Escribe la dosis"),
+      frequency: z.string().trim().min(1, "Escribe la frecuencia"),
+      duration: z.string().trim().min(1, "Escribe la duración"),
+      instructions: z.string(),
+      instructionsEdited: z.boolean(),
+    }),
+  ),
 });
 
 type FormValues = {
@@ -77,6 +96,7 @@ type FormValues = {
   bloodPressure?: string;
   temperature?: number | string;
   heartRate?: number | string;
+  recipeItems: PrescriptionItemValues[];
 };
 
 interface Props {
@@ -117,8 +137,19 @@ export function MedicalRecordForm({
       bloodPressure: record?.bloodPressure || "",
       temperature: record?.temperature as number | undefined,
       heartRate: record?.heartRate as number | undefined,
+      recipeItems: [],
     },
   });
+  // "Tratamiento" follows the prescription until the doctor writes it by hand.
+  const [treatmentEdited, setTreatmentEdited] = useState(Boolean(record?.treatment));
+
+  function syncTreatment(force = false) {
+    if (treatmentEdited && !force) return;
+    const items = form.getValues("recipeItems");
+    if (force || items.length) {
+      form.setValue("treatment", buildTreatmentFromItems(items));
+    }
+  }
 
   useEffect(() => {
     async function loadOptions() {
@@ -177,7 +208,7 @@ export function MedicalRecordForm({
     );
   }
 
-  async function onSubmit(values: FormValues) {
+  async function onSubmit({ recipeItems, ...values }: FormValues) {
     setIsLoading(true);
     try {
       const payload = {
@@ -209,13 +240,51 @@ export function MedicalRecordForm({
             : undefined,
       };
 
-      if (record) {
-        unwrapAction(await updateMedicalRecordAction(record.id, payload));
-        toast.success("Historia clínica actualizada.");
-      } else {
-        unwrapAction(await createMedicalRecordAction(payload));
-        toast.success("Historia clínica registrada.");
+      const saved = (record
+        ? unwrapAction(await updateMedicalRecordAction(record.id, payload))
+        : unwrapAction(await createMedicalRecordAction(payload))) as MedicalRecord;
+      const savedLabel = record ? "Historia clínica actualizada" : "Historia clínica registrada";
+
+      if (!recipeItems.length) {
+        toast.success(savedLabel);
+        onSuccess?.();
+        return;
       }
+
+      const recipeResult = await createRecipeAction({
+        patientId: values.patientId,
+        staffId: values.staffId,
+        medicalRecordId: saved.id ?? record?.id,
+        prescribedAt: values.date,
+        diagnosis: (values.diagnosis || values.reason || "Consulta médica").slice(0, 180),
+        items: recipeItems.map((item) => ({
+          medicine: item.medicine,
+          presentation: item.presentation,
+          quantity: item.quantity || undefined,
+          dosage: item.dosage,
+          frequency: item.frequency,
+          duration: item.duration,
+          instructions: item.instructions || undefined,
+        })),
+      });
+
+      if (!recipeResult.success) {
+        toast.error(`${savedLabel}, pero la receta no se guardó`, {
+          description: recipeResult.error,
+        });
+        onSuccess?.();
+        return;
+      }
+
+      const recipeId = recipeResult.data.id;
+      toast.success(`${savedLabel} con su receta`, {
+        description: `${recipeItems.length} medicamento${recipeItems.length !== 1 ? "s" : ""}`,
+        action: {
+          label: "Abrir PDF",
+          onClick: () =>
+            window.open(`/api/recipes/${recipeId}/pdf`, "_blank", "noopener,noreferrer"),
+        },
+      });
       onSuccess?.();
     } catch (err: unknown) {
       toast.error(getErrorMessage(err));
@@ -384,8 +453,6 @@ export function MedicalRecordForm({
             { name: "anamnesis" as const, label: "Anamnesis", placeholder: "Historia de la enfermedad actual..." },
             { name: "physicalExam" as const, label: "Examen Físico", placeholder: "Hallazgos clínicos..." },
             { name: "diagnosis" as const, label: "Diagnóstico", placeholder: "Diagnóstico principal y secundarios..." },
-            { name: "treatment" as const, label: "Tratamiento", placeholder: "Indicaciones médicas..." },
-            { name: "observations" as const, label: "Observaciones", placeholder: "Notas adicionales y seguimiento..." },
           ].map(({ name, label, placeholder }) => (
             <Controller
               key={name}
@@ -400,6 +467,82 @@ export function MedicalRecordForm({
               )}
             />
           ))}
+        </FieldGroup>
+      </div>
+
+      <div className="space-y-3">
+        <h4 className="border-b pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Receta
+        </h4>
+        {record ? <MedicalRecordRecipes record={record} /> : null}
+        {record ? (
+          <p className="text-xs text-muted-foreground">
+            Los medicamentos que agregues aquí se guardan como una receta nueva de esta consulta.
+          </p>
+        ) : null}
+        <MedicalRecordPrescription form={form} onItemsChange={() => syncTreatment()} />
+      </div>
+
+      <div className="space-y-3">
+        <h4 className="border-b pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Tratamiento e indicaciones
+        </h4>
+        <FieldGroup>
+          <Controller
+            name="treatment"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <div className="flex items-center justify-between gap-2">
+                  <FieldLabel htmlFor="treatment">Tratamiento</FieldLabel>
+                  {treatmentEdited && form.watch("recipeItems").length ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTreatmentEdited(false);
+                        syncTreatment(true);
+                      }}
+                      className="flex items-center gap-1 text-xs text-primary hover:underline"
+                    >
+                      <RotateCcw className="size-3" />
+                      Volver a llenar desde la receta
+                    </button>
+                  ) : !treatmentEdited ? (
+                    <span className="text-xs text-muted-foreground">
+                      Se llena con la receta · puedes editarlo
+                    </span>
+                  ) : null}
+                </div>
+                <Textarea
+                  {...field}
+                  id="treatment"
+                  placeholder="Indicaciones médicas..."
+                  rows={4}
+                  onChange={(event) => {
+                    field.onChange(event);
+                    setTreatmentEdited(true);
+                  }}
+                />
+                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              </Field>
+            )}
+          />
+          <Controller
+            name="observations"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="observations">Observaciones</FieldLabel>
+                <Textarea
+                  {...field}
+                  id="observations"
+                  placeholder="Notas adicionales y seguimiento..."
+                  rows={3}
+                />
+                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              </Field>
+            )}
+          />
         </FieldGroup>
       </div>
 
