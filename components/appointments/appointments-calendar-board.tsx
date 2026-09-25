@@ -98,11 +98,11 @@ function getStatusLabel(status: AppointmentStatus) {
   }
 }
 
+const APPOINTMENT_MANAGER_ROLES = [Role.ADMIN, Role.RECEPTIONIST, Role.DOCTOR];
+
 function canManageAppointments(currentUser: User | null) {
   return Boolean(
-    currentUser &&
-      (currentUser.roles.includes(Role.ADMIN) ||
-        currentUser.roles.includes(Role.RECEPTIONIST)),
+    currentUser?.roles?.some((role) => APPOINTMENT_MANAGER_ROLES.includes(role)),
   );
 }
 
@@ -170,7 +170,13 @@ export function AppointmentsCalendarBoard({
     return staffWithDoctorRole.length > 0 ? staffWithDoctorRole : staffMembers;
   }, [staffMembers]);
 
-  const isDoctor = Boolean(currentUser?.roles.includes(Role.DOCTOR));
+  // Doctors without an admin/reception role only see their own agenda
+  // (the backend also filters their appointment list to themselves).
+  const isDoctor = Boolean(
+    currentUser?.roles?.includes(Role.DOCTOR) &&
+      !currentUser.roles.includes(Role.ADMIN) &&
+      !currentUser.roles.includes(Role.RECEPTIONIST),
+  );
   const canCreate = canManageAppointments(currentUser);
 
   const [selectedDate, setSelectedDate] = useState(todayISO);

@@ -483,8 +483,8 @@ export function AppointmentForm({
       ) : null}
 
       {patient && specialist && date && (coordinateLater || (startTime && !selectedSlotUnavailable)) ? (
-        <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
-          <CalendarCheck2 className="mt-0.5 size-4 shrink-0 text-primary" />
+        <div className="flex items-start gap-3 rounded-xl bg-primary px-4 py-3 text-sm text-primary-foreground shadow-sm">
+          <CalendarCheck2 className="mt-0.5 size-4 shrink-0" />
           <p>
             <span className="font-medium">
               {patient.firstName} {patient.lastName}
@@ -525,7 +525,7 @@ export function AppointmentForm({
 function StepTitle({ step, title, hint }: { step: number; title: string; hint?: string }) {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="flex size-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+      <span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
         {step}
       </span>
       <h3 className="text-sm font-semibold">{title}</h3>
