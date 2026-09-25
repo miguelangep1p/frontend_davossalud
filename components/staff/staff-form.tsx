@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { unwrapAction } from "@/lib/action-result";
 import * as z from "zod";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { Button } from "@/components/ui/button";
@@ -79,7 +80,7 @@ export function StaffForm({ onSuccess }: StaffFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      await createStaffAction(values);
+      unwrapAction(await createStaffAction(values));
       toast.success("Personal registrado correctamente");
       form.reset();
       if (onSuccess) {

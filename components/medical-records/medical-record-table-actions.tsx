@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { MoreHorizontal, Eye, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { unwrapAction } from "@/lib/action-result";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -51,7 +52,7 @@ export function MedicalRecordTableActions({ record }: Props) {
   async function handleDelete() {
     setIsLoading(true);
     try {
-      await deleteMedicalRecordAction(record.id);
+      unwrapAction(await deleteMedicalRecordAction(record.id));
       toast.success("Historia clínica eliminada.");
       setDeleteOpen(false);
     } catch (err: unknown) {

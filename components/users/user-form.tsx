@@ -5,6 +5,7 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
+import { unwrapAction } from "@/lib/action-result";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -65,10 +66,10 @@ export function UserForm({ initialData, onSuccess }: UserFormProps) {
           roles: values.roles,
           isActive: values.isActive,
         };
-        await updateUserAction(initialData.id, updateData);
+        unwrapAction(await updateUserAction(initialData.id, updateData));
         toast.success("Usuario actualizado correctamente");
       } else {
-        await createUserAction(values);
+        unwrapAction(await createUserAction(values));
         toast.success("Usuario registrado correctamente");
       }
       form.reset();

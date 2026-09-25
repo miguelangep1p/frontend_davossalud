@@ -1,19 +1,47 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
-import { CalendarClock, GripVertical, Loader2, MoveRight } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  GripVertical,
+  Loader2,
+  MousePointerClick,
+  MoveRight,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   getAppointmentsListAction,
   rescheduleAppointmentAction,
 } from "@/lib/actions/appointment.actions";
-import { getSchedulesByStaffIdAction } from "@/lib/actions/schedule.actions";
+import {
+  CLINIC_CLOSING_TIME,
+  CLINIC_OPENING_TIME,
+  CLINIC_SLOTS,
+  SLOT_MINUTES,
+  fitsClinicDay,
+  timeToMins,
+  todayISO,
+} from "@/lib/clinic-hours";
+import { cn } from "@/lib/utils";
 import { Appointment, AppointmentStatus } from "@/types/appointment";
-import { Schedule } from "@/types/schedule";
+import { Patient } from "@/types/patient";
 import { Staff } from "@/types/staff";
 import { Role, User } from "@/types/user";
+import {
+  AppointmentForm,
+  AppointmentFormDefaults,
+} from "@/components/appointments/appointment-form";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -23,7 +51,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const ROW_HEIGHT = 54;
+const ROW_HEIGHT = 44;
 const ALL_STAFF_VALUE = "__ALL__";
 const FALLBACK_COLORS = [
   "#F472B6",
@@ -36,17 +64,21 @@ const FALLBACK_COLORS = [
   "#06B6D4",
 ];
 
-function timeToMins(time: string) {
-  const [hours, minutes] = time.split(":").map(Number);
-  return hours * 60 + (minutes || 0);
+function shiftDate(date: string, days: number) {
+  const [year, month, day] = date.split("-").map(Number);
+  const next = new Date(year, month - 1, day + days);
+  const mm = String(next.getMonth() + 1).padStart(2, "0");
+  const dd = String(next.getDate()).padStart(2, "0");
+  return `${next.getFullYear()}-${mm}-${dd}`;
 }
 
-function minsToTime(mins: number) {
-  const hours = Math.floor(mins / 60)
-    .toString()
-    .padStart(2, "0");
-  const minutes = (mins % 60).toString().padStart(2, "0");
-  return `${hours}:${minutes}`;
+function formatDayTitle(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("es-PE", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
 }
 
 function getStatusLabel(status: AppointmentStatus) {
@@ -66,23 +98,22 @@ function getStatusLabel(status: AppointmentStatus) {
   }
 }
 
-function canDragAppointment(appointment: Appointment, currentUser: User | null) {
-  if (!currentUser) return false;
-  if (!appointment.startTime || !appointment.duration || !appointment.scheduleId) {
-    return false;
-  }
-  if (
-    appointment.status === AppointmentStatus.CANCELLED ||
-    appointment.status === AppointmentStatus.ATTENDED ||
-    appointment.status === AppointmentStatus.RESCHEDULED
-  ) {
-    return false;
-  }
-
-  return (
-    currentUser.roles.includes(Role.ADMIN) ||
-    currentUser.roles.includes(Role.RECEPTIONIST)
+function canManageAppointments(currentUser: User | null) {
+  return Boolean(
+    currentUser &&
+      (currentUser.roles.includes(Role.ADMIN) ||
+        currentUser.roles.includes(Role.RECEPTIONIST)),
   );
+}
+
+function canDragAppointment(appointment: Appointment, currentUser: User | null) {
+  if (!canManageAppointments(currentUser)) return false;
+  if (!appointment.startTime || !appointment.duration) return false;
+  return ![
+    AppointmentStatus.CANCELLED,
+    AppointmentStatus.ATTENDED,
+    AppointmentStatus.RESCHEDULED,
+  ].includes(appointment.status);
 }
 
 function hexToRgba(hex: string, alpha: number) {
@@ -99,7 +130,7 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
-function getFallbackColor(staffId: string) {
+function getStaffColor(staffId: string) {
   let hash = 0;
   for (const char of staffId) {
     hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
@@ -108,12 +139,29 @@ function getFallbackColor(staffId: string) {
   return FALLBACK_COLORS[hash % FALLBACK_COLORS.length];
 }
 
+function overlaps(appointment: Appointment, start: number, end: number) {
+  if (!appointment.startTime) return false;
+  const bookedStart = timeToMins(appointment.startTime);
+  const bookedEnd = appointment.endTime
+    ? timeToMins(appointment.endTime)
+    : bookedStart + (appointment.duration || 0);
+  return bookedStart < end && bookedEnd > start;
+}
+
 interface Props {
   currentUser: User | null;
   staffMembers: Staff[];
+  patients: Patient[];
+  /** Show a single professional's agenda without the specialist picker. */
+  lockedStaffId?: string;
 }
 
-export function AppointmentsCalendarBoard({ currentUser, staffMembers }: Props) {
+export function AppointmentsCalendarBoard({
+  currentUser,
+  staffMembers,
+  patients,
+  lockedStaffId,
+}: Props) {
   const doctors = useMemo(() => {
     const staffWithDoctorRole = staffMembers.filter((staff) =>
       staff.user.roles.includes(Role.DOCTOR),
@@ -122,117 +170,82 @@ export function AppointmentsCalendarBoard({ currentUser, staffMembers }: Props) 
     return staffWithDoctorRole.length > 0 ? staffWithDoctorRole : staffMembers;
   }, [staffMembers]);
 
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().slice(0, 10),
-  );
-  const [selectedStaffId, setSelectedStaffId] = useState(
-    currentUser?.roles.includes(Role.DOCTOR)
-      ? currentUser.staff?.id || ""
-      : ALL_STAFF_VALUE,
-  );
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const isDoctor = Boolean(currentUser?.roles.includes(Role.DOCTOR));
+  const canCreate = canManageAppointments(currentUser);
+
+  const [selectedDate, setSelectedDate] = useState(todayISO);
+  const [pickedStaffId, setSelectedStaffId] = useState(ALL_STAFF_VALUE);
+  const selectedStaffId =
+    lockedStaffId ??
+    (isDoctor
+      ? currentUser?.staff?.id || ""
+      : doctors.some((doctor) => doctor.id === pickedStaffId)
+        ? pickedStaffId
+        : ALL_STAFF_VALUE);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [draggingAppointmentId, setDraggingAppointmentId] = useState<string | null>(null);
+  const [newAppointment, setNewAppointment] = useState<AppointmentFormDefaults | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const visibleStaffMembers = useMemo(() => {
+    if (lockedStaffId) {
+      return staffMembers.filter((staff) => staff.id === lockedStaffId);
+    }
     if (selectedStaffId === ALL_STAFF_VALUE) {
       return doctors;
     }
-
     return doctors.filter((staff) => staff.id === selectedStaffId);
-  }, [doctors, selectedStaffId]);
+  }, [doctors, lockedStaffId, selectedStaffId, staffMembers]);
 
   const visibleStaffIds = useMemo(
     () => new Set(visibleStaffMembers.map((staff) => staff.id)),
     [visibleStaffMembers],
   );
 
-  useEffect(() => {
-    async function loadCalendarData() {
-      if (!selectedDate) {
-        setSchedules([]);
-        setAppointments([]);
-        return;
-      }
+  const resolvedStaffId =
+    selectedStaffId === ALL_STAFF_VALUE ? undefined : selectedStaffId;
 
-      const resolvedStaffId =
-        selectedStaffId === ALL_STAFF_VALUE ? undefined : selectedStaffId;
-
-      if (!resolvedStaffId && selectedStaffId !== ALL_STAFF_VALUE) {
-        setSchedules([]);
-        setAppointments([]);
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        const [appointmentsResult, schedulesResult] = await Promise.all([
-          getAppointmentsListAction({ date: selectedDate, staffId: resolvedStaffId }),
-          getSchedulesByStaffIdAction(resolvedStaffId, selectedDate),
-        ]);
-
-        if (!appointmentsResult.success) {
-          throw new Error(appointmentsResult.error || "No se pudieron cargar las citas.");
-        }
-        if (!schedulesResult.success) {
-          throw new Error(schedulesResult.error || "No se pudieron cargar los horarios.");
-        }
-
-        setAppointments(appointmentsResult.data || []);
-        setSchedules(schedulesResult.data || []);
-      } catch (error: unknown) {
-        toast.error(
-          error instanceof Error ? error.message : "No se pudo cargar el calendario.",
-        );
-      } finally {
-        setIsLoading(false);
-      }
+  const fetchAppointments = useCallback(async (): Promise<Appointment[]> => {
+    if (!selectedDate || (!resolvedStaffId && selectedStaffId !== ALL_STAFF_VALUE)) {
+      return [];
     }
 
-    void loadCalendarData();
-  }, [selectedDate, selectedStaffId]);
+    const result = await getAppointmentsListAction({
+      date: selectedDate,
+      staffId: resolvedStaffId,
+    });
+
+    if (!result.success) {
+      toast.error("No se pudo cargar el calendario", { description: result.error });
+      return [];
+    }
+    return result.data || [];
+  }, [resolvedStaffId, selectedDate, selectedStaffId]);
+
+  const loadAppointments = useCallback(async () => {
+    setAppointments(await fetchAppointments());
+  }, [fetchAppointments]);
+
+  const requestKey = `${selectedDate}|${selectedStaffId}`;
+  const isLoading = loadedKey !== requestKey;
 
   useEffect(() => {
-    if (currentUser?.roles.includes(Role.DOCTOR)) {
-      setSelectedStaffId(currentUser.staff?.id || "");
-      return;
-    }
-
-    if (selectedStaffId !== ALL_STAFF_VALUE && doctors.length > 0) {
-      const hasSelected = doctors.some((doctor) => doctor.id === selectedStaffId);
-      if (!hasSelected) {
-        setSelectedStaffId(ALL_STAFF_VALUE);
-      }
-    }
-  }, [currentUser, doctors, selectedStaffId]);
+    let cancelled = false;
+    fetchAppointments().then((data) => {
+      if (cancelled) return;
+      setAppointments(data);
+      setLoadedKey(requestKey);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchAppointments, requestKey]);
 
   const filteredAppointments = useMemo(
     () => appointments.filter((appointment) => visibleStaffIds.has(appointment.staffId)),
     [appointments, visibleStaffIds],
   );
-
-  const filteredSchedules = useMemo(
-    () => schedules.filter((schedule) => visibleStaffIds.has(schedule.staffId)),
-    [schedules, visibleStaffIds],
-  );
-
-  const schedulesByStaff = useMemo(() => {
-    const grouped = new Map<string, Schedule[]>();
-
-    filteredSchedules.forEach((schedule) => {
-      const current = grouped.get(schedule.staffId) || [];
-      current.push(schedule);
-      grouped.set(schedule.staffId, current);
-    });
-
-    grouped.forEach((staffSchedules) => {
-      staffSchedules.sort((left, right) => timeToMins(left.startTime) - timeToMins(right.startTime));
-    });
-
-    return grouped;
-  }, [filteredSchedules]);
 
   const scheduledAppointments = useMemo(
     () =>
@@ -240,7 +253,8 @@ export function AppointmentsCalendarBoard({ currentUser, staffMembers }: Props) 
         (appointment) =>
           appointment.startTime &&
           appointment.duration &&
-          appointment.status !== AppointmentStatus.RESCHEDULED,
+          appointment.status !== AppointmentStatus.RESCHEDULED &&
+          appointment.status !== AppointmentStatus.CANCELLED,
       ),
     [filteredAppointments],
   );
@@ -249,73 +263,25 @@ export function AppointmentsCalendarBoard({ currentUser, staffMembers }: Props) 
     () =>
       filteredAppointments.filter(
         (appointment) =>
-          !appointment.startTime ||
-          !appointment.duration ||
+          (!appointment.startTime || !appointment.duration) &&
           appointment.status === AppointmentStatus.PENDING_CONFIRMATION,
       ),
     [filteredAppointments],
   );
 
-  const dayWindow = useMemo(() => {
-    const startCandidates = filteredSchedules.map((schedule) => timeToMins(schedule.startTime));
-    const endCandidates = filteredSchedules.map((schedule) => timeToMins(schedule.endTime));
-
-    scheduledAppointments.forEach((appointment) => {
-      if (!appointment.startTime) {
-        return;
-      }
-
-      const start = timeToMins(appointment.startTime);
-      const end = appointment.endTime
-        ? timeToMins(appointment.endTime)
-        : start + (appointment.duration || 0);
-
-      startCandidates.push(start);
-      endCandidates.push(end);
-    });
-
-    if (!startCandidates.length || !endCandidates.length) {
-      return null;
-    }
-
-    return {
-      start: Math.min(...startCandidates),
-      end: Math.max(...endCandidates),
-    };
-  }, [filteredSchedules, scheduledAppointments]);
-
-  const timeSlots = useMemo(() => {
-    if (!dayWindow) return [];
-
-    const slots: string[] = [];
-    for (let mins = dayWindow.start; mins < dayWindow.end; mins += 30) {
-      slots.push(minsToTime(mins));
-    }
-    return slots;
-  }, [dayWindow]);
-
   const slotIndexMap = useMemo(() => {
     const map = new Map<string, number>();
-    timeSlots.forEach((slot, index) => map.set(slot, index));
+    CLINIC_SLOTS.forEach((slot, index) => map.set(slot, index));
     return map;
-  }, [timeSlots]);
+  }, []);
 
   const appointmentsByStaff = useMemo(() => {
     const grouped = new Map<string, Appointment[]>();
-
     scheduledAppointments.forEach((appointment) => {
       const current = grouped.get(appointment.staffId) || [];
       current.push(appointment);
       grouped.set(appointment.staffId, current);
     });
-
-    grouped.forEach((staffAppointments) => {
-      staffAppointments.sort((left, right) => {
-        if (!left.startTime || !right.startTime) return 0;
-        return timeToMins(left.startTime) - timeToMins(right.startTime);
-      });
-    });
-
     return grouped;
   }, [scheduledAppointments]);
 
@@ -325,180 +291,179 @@ export function AppointmentsCalendarBoard({ currentUser, staffMembers }: Props) 
     [appointments, draggingAppointmentId],
   );
 
-  function getAppointmentColor(appointment: Appointment) {
-    return appointment.schedule?.color || getFallbackColor(appointment.staffId);
+  const isToday = selectedDate === todayISO();
+  const isPastDay = selectedDate < todayISO();
+  const nowMins = (() => {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  })();
+
+  function isSlotInPast(slot: string) {
+    return isPastDay || (isToday && timeToMins(slot) <= nowMins);
   }
 
-  function getMatchingSchedule(staffId: string, startTime: string, duration: number) {
-    const start = timeToMins(startTime);
+  function isSlotFree(staffId: string, slot: string, duration: number, excludeId?: string) {
+    const start = timeToMins(slot);
     const end = start + duration;
-    const staffSchedules = schedulesByStaff.get(staffId) || [];
-
-    return staffSchedules.find((schedule) => {
-      const scheduleStart = timeToMins(schedule.startTime);
-      const scheduleEnd = timeToMins(schedule.endTime);
-      return start >= scheduleStart && end <= scheduleEnd;
-    });
+    return !(appointmentsByStaff.get(staffId) || []).some(
+      (appointment) =>
+        appointment.id !== excludeId &&
+        appointment.status === AppointmentStatus.CONFIRMED &&
+        overlaps(appointment, start, end),
+    );
   }
 
-  function hasScheduleCoverage(staffId: string, startTime: string) {
-    const start = timeToMins(startTime);
-    const end = start + 30;
-    const staffSchedules = schedulesByStaff.get(staffId) || [];
-
-    return staffSchedules.some((schedule) => {
-      const scheduleStart = timeToMins(schedule.startTime);
-      const scheduleEnd = timeToMins(schedule.endTime);
-      return start < scheduleEnd && end > scheduleStart;
-    });
+  function canDropOn(staffId: string, slot: string) {
+    if (!draggingAppointment?.duration || isPending) return false;
+    return (
+      draggingAppointment.staffId === staffId &&
+      fitsClinicDay(slot, draggingAppointment.duration) &&
+      !isSlotInPast(slot) &&
+      isSlotFree(staffId, slot, draggingAppointment.duration, draggingAppointment.id)
+    );
   }
 
-  async function refreshCalendarData() {
-    const resolvedStaffId =
-      selectedStaffId === ALL_STAFF_VALUE ? undefined : selectedStaffId;
-
-    const [appointmentsResult, schedulesResult] = await Promise.all([
-      getAppointmentsListAction({ date: selectedDate, staffId: resolvedStaffId }),
-      getSchedulesByStaffIdAction(resolvedStaffId, selectedDate),
-    ]);
-
-    if (appointmentsResult.success) {
-      setAppointments(appointmentsResult.data || []);
+  function openNewAppointment(staffId: string, slot: string) {
+    if (!canCreate) return;
+    if (isSlotInPast(slot)) {
+      toast.info("No puedes agendar en una hora pasada");
+      return;
     }
-
-    if (schedulesResult.success) {
-      setSchedules(schedulesResult.data || []);
-    }
+    if (!isSlotFree(staffId, slot, SLOT_MINUTES)) return;
+    setNewAppointment({ staffId, date: selectedDate, startTime: slot });
   }
 
   function moveAppointment(staffId: string, targetStartTime: string) {
-    if (!draggingAppointment || !draggingAppointment.duration) {
-      return;
-    }
+    if (!draggingAppointment || !draggingAppointment.duration) return;
 
     if (draggingAppointment.staffId !== staffId) {
       toast.error("La cita solo se puede mover dentro del mismo especialista.");
       return;
     }
 
-    const matchingSchedule = getMatchingSchedule(
-      staffId,
-      targetStartTime,
-      draggingAppointment.duration,
-    );
-
-    if (!matchingSchedule) {
-      toast.error("Ese bloque no está dentro de un turno válido.");
-      return;
-    }
-
+    const appointment = draggingAppointment;
     startTransition(async () => {
-      try {
-        await rescheduleAppointmentAction(draggingAppointment.id, {
-          date: selectedDate,
-          startTime: targetStartTime,
-          duration: draggingAppointment.duration || undefined,
-          scheduleId: matchingSchedule.id,
-        });
+      const result = await rescheduleAppointmentAction(appointment.id, {
+        date: selectedDate,
+        startTime: targetStartTime,
+        duration: appointment.duration || undefined,
+      });
 
-        toast.success("Cita reprogramada correctamente.");
-        await refreshCalendarData();
-      } catch (error: unknown) {
-        toast.error(
-          error instanceof Error ? error.message : "No se pudo mover la cita.",
-        );
-      } finally {
-        setDraggingAppointmentId(null);
+      if (result.success) {
+        toast.success("Cita reprogramada", {
+          description: `${appointment.patient.firstName} ${appointment.patient.lastName} · ${targetStartTime}`,
+        });
+        await loadAppointments();
+      } else {
+        toast.error("No se pudo mover la cita", { description: result.error });
       }
+      setDraggingAppointmentId(null);
     });
   }
 
-  const gridTemplateColumns = `96px repeat(${Math.max(visibleStaffMembers.length, 1)}, minmax(280px, 1fr))`;
+  const gridTemplateColumns = `72px repeat(${Math.max(visibleStaffMembers.length, 1)}, minmax(220px, 1fr))`;
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <Card className="border-border/70 bg-white/90 shadow-sm">
-        <CardHeader className="gap-4 border-b border-border/70 pb-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <CardTitle className="text-xl">Calendario de citas</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Arrastra citas confirmadas a otro bloque horario válido para reprogramarlas.
-              </p>
+    <div className={cn("grid gap-6", !lockedStaffId && "xl:grid-cols-[minmax(0,1fr)_300px]")}>
+      <Card className="gap-0 overflow-hidden border-border/70 py-0 shadow-sm">
+        <CardHeader className="gap-4 border-b border-border/70 py-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Día anterior"
+                onClick={() => setSelectedDate((date) => shiftDate(date, -1))}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Día siguiente"
+                onClick={() => setSelectedDate((date) => shiftDate(date, 1))}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setSelectedDate(todayISO())}
+                disabled={isToday}
+              >
+                Hoy
+              </Button>
+              <CardTitle className="ml-1 text-lg capitalize">
+                {formatDayTitle(selectedDate)}
+              </CardTitle>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Fecha
-                </label>
-                <Input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(event) => setSelectedDate(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Especialista
-                </label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                type="date"
+                aria-label="Fecha"
+                className="sm:w-44"
+                value={selectedDate}
+                onChange={(event) => event.target.value && setSelectedDate(event.target.value)}
+              />
+              {!lockedStaffId ? (
                 <Select
                   value={selectedStaffId}
                   onValueChange={setSelectedStaffId}
-                  disabled={currentUser?.roles.includes(Role.DOCTOR)}
+                  disabled={isDoctor}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione especialista" />
+                  <SelectTrigger aria-label="Especialista" className="sm:w-56">
+                    <SelectValue placeholder="Especialista" />
                   </SelectTrigger>
                   <SelectContent>
-                    {!currentUser?.roles.includes(Role.DOCTOR) ? (
-                      <SelectItem value={ALL_STAFF_VALUE}>Todos</SelectItem>
+                    {!isDoctor ? (
+                      <SelectItem value={ALL_STAFF_VALUE}>Todos los especialistas</SelectItem>
                     ) : null}
                     {doctors.map((doctor) => (
                       <SelectItem key={doctor.id} value={doctor.id}>
                         {doctor.user.firstName} {doctor.user.lastName}
-                        {doctor.specialty ? ` - ${doctor.specialty}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              ) : null}
             </div>
           </div>
+          {canCreate ? (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MousePointerClick className="size-3.5" />
+              Doble clic en un espacio libre para agendar · arrastra una cita para moverla
+            </p>
+          ) : null}
         </CardHeader>
 
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="flex h-[560px] items-center justify-center text-sm text-muted-foreground">
+            <div className="flex h-[480px] items-center justify-center text-sm text-muted-foreground">
               <Loader2 className="mr-2 size-4 animate-spin" />
-              Cargando calendario...
+              Cargando calendario…
             </div>
           ) : !visibleStaffMembers.length ? (
-            <div className="flex h-[560px] items-center justify-center text-sm text-muted-foreground">
-              No hay especialistas disponibles para mostrar.
-            </div>
-          ) : !timeSlots.length ? (
-            <div className="flex h-[560px] items-center justify-center text-sm text-muted-foreground">
-              No hay turnos configurados para la fecha seleccionada.
+            <div className="flex h-[480px] items-center justify-center text-sm text-muted-foreground">
+              No hay especialistas para mostrar.
             </div>
           ) : (
-            <div className="max-h-[70vh] overflow-auto">
+            <div className="dialog-scroll max-h-[70vh] overflow-auto">
               <div
-                className="grid min-w-[720px]"
+                className="grid min-w-[520px] select-none"
                 style={{
                   gridTemplateColumns,
-                  gridTemplateRows: `auto repeat(${timeSlots.length}, ${ROW_HEIGHT}px)`,
+                  gridTemplateRows: `auto repeat(${CLINIC_SLOTS.length}, ${ROW_HEIGHT}px)`,
                 }}
               >
-                <div className="sticky top-0 z-20 border-b border-r border-border/70 bg-white/95 px-3 py-3 backdrop-blur-sm" />
+                <div className="sticky top-0 left-0 z-30 border-r border-b border-border/70 bg-card" />
                 {visibleStaffMembers.map((staff) => (
                   <div
                     key={staff.id}
-                    className="sticky top-0 z-20 border-b border-border/70 bg-white/95 px-4 py-3 backdrop-blur-sm"
+                    className="sticky top-0 z-20 border-b border-border/70 bg-card/95 px-4 py-3 backdrop-blur-sm"
                   >
                     <div className="flex items-center gap-3">
                       <span
-                        className="h-3 w-3 rounded-full border border-border"
-                        style={{ backgroundColor: getFallbackColor(staff.id) }}
+                        className="size-3 shrink-0 rounded-full"
+                        style={{ backgroundColor: getStaffColor(staff.id) }}
                       />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-foreground">
@@ -512,115 +477,100 @@ export function AppointmentsCalendarBoard({ currentUser, staffMembers }: Props) 
                   </div>
                 ))}
 
-                {timeSlots.map((slot, rowIndex) => (
-                  <div key={slot} className="contents">
-                    <div
-                      className="border-b border-r border-border/70 bg-muted/20 px-3 py-3 text-xs font-medium text-muted-foreground"
-                      style={{ gridColumn: 1, gridRow: rowIndex + 2 }}
-                    >
-                      {slot}
-                    </div>
-                    {visibleStaffMembers.map((staff, staffIndex) => {
-                      const isCovered = hasScheduleCoverage(staff.id, slot);
-                      const draggingDuration = draggingAppointment?.duration;
-                      const canDropOnSlot =
-                        draggingAppointment &&
-                        draggingAppointment.staffId === staff.id &&
-                        draggingDuration &&
-                        getMatchingSchedule(staff.id, slot, draggingDuration);
-                      const isDropTarget =
-                        Boolean(canDropOnSlot) &&
-                        !isPending;
-
-                      return (
-                        <div
-                          key={`${staff.id}-${slot}`}
-                          className={`relative border-b border-border/70 ${
-                            isCovered ? "bg-white" : "bg-muted/10"
-                          } ${isDropTarget ? "ring-2 ring-rose-200 ring-inset" : ""}`}
-                          style={{
-                            gridColumn: staffIndex + 2,
-                            gridRow: rowIndex + 2,
-                          }}
-                          onDragOver={(event) => {
-                            if (isDropTarget) {
+                {CLINIC_SLOTS.map((slot, rowIndex) => {
+                  const isHour = slot.endsWith(":00");
+                  const past = isSlotInPast(slot);
+                  return (
+                    <div key={slot} className="contents">
+                      <div
+                        className={cn(
+                          "sticky left-0 z-10 border-r border-border/70 bg-card px-3 pt-1 text-right text-xs tabular-nums",
+                          isHour ? "font-medium text-foreground" : "text-muted-foreground/60",
+                        )}
+                        style={{ gridColumn: 1, gridRow: rowIndex + 2 }}
+                      >
+                        {slot}
+                      </div>
+                      {visibleStaffMembers.map((staff, staffIndex) => {
+                        const isDropTarget = canDropOn(staff.id, slot);
+                        return (
+                          <div
+                            key={`${staff.id}-${slot}`}
+                            className={cn(
+                              "group/cell relative border-border/60",
+                              isHour ? "border-t" : "border-t border-dashed border-t-border/40",
+                              past ? "bg-muted/40" : canCreate && "cursor-pointer hover:bg-primary/5",
+                              isDropTarget && "bg-primary/5 ring-2 ring-primary/30 ring-inset",
+                            )}
+                            style={{ gridColumn: staffIndex + 2, gridRow: rowIndex + 2 }}
+                            onDoubleClick={() => openNewAppointment(staff.id, slot)}
+                            onDragOver={(event) => {
+                              if (isDropTarget) event.preventDefault();
+                            }}
+                            onDrop={(event) => {
                               event.preventDefault();
-                            }
-                          }}
-                          onDrop={(event) => {
-                            event.preventDefault();
-                            if (isDropTarget) {
-                              moveAppointment(staff.id, slot);
-                            }
-                          }}
-                        >
-                          {isCovered ? (
-                            <div className="absolute inset-y-0 left-0 w-1 bg-rose-100/80" />
-                          ) : null}
-                          {isDropTarget ? (
-                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-[11px] font-medium text-rose-500">
-                              Soltar aquí
-                            </div>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
+                              if (isDropTarget) moveAppointment(staff.id, slot);
+                            }}
+                          >
+                            {canCreate && !past && !draggingAppointment ? (
+                              <span className="pointer-events-none absolute inset-0 hidden items-center px-3 text-xs text-primary/70 group-hover/cell:flex">
+                                + {slot}
+                              </span>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
 
                 {visibleStaffMembers.flatMap((staff, staffIndex) =>
                   (appointmentsByStaff.get(staff.id) || []).map((appointment) => {
-                    if (!appointment.startTime || !appointment.duration) {
-                      return null;
-                    }
+                    if (!appointment.startTime || !appointment.duration) return null;
 
                     const startIndex = slotIndexMap.get(appointment.startTime);
-                    if (startIndex === undefined) {
-                      return null;
-                    }
+                    if (startIndex === undefined) return null;
 
-                    const color = getAppointmentColor(appointment);
-                    const blockSpan = Math.max(Math.ceil(appointment.duration / 30), 1);
+                    const color = getStaffColor(appointment.staffId);
+                    const blockSpan = Math.max(Math.ceil(appointment.duration / SLOT_MINUTES), 1);
+                    const draggable = canDragAppointment(appointment, currentUser);
+                    const attended = appointment.status === AppointmentStatus.ATTENDED;
 
                     return (
                       <div
                         key={appointment.id}
-                        draggable={canDragAppointment(appointment, currentUser)}
+                        draggable={draggable}
                         onDragStart={() => setDraggingAppointmentId(appointment.id)}
                         onDragEnd={() => setDraggingAppointmentId(null)}
-                        className={`relative z-10 m-1 rounded-2xl border px-3 py-2 shadow-sm ${
-                          canDragAppointment(appointment, currentUser)
-                            ? "cursor-grab active:cursor-grabbing"
-                            : "cursor-default"
-                        }`}
+                        onDoubleClick={(event) => event.stopPropagation()}
+                        className={cn(
+                          "relative z-10 m-0.5 overflow-hidden rounded-lg border px-2.5 py-1.5 shadow-xs transition-opacity",
+                          draggable ? "cursor-grab active:cursor-grabbing" : "cursor-default",
+                          draggingAppointmentId === appointment.id && "opacity-50",
+                          attended && "opacity-70",
+                        )}
                         style={{
                           gridColumn: staffIndex + 2,
                           gridRow: `${startIndex + 2} / span ${blockSpan}`,
-                          borderColor: hexToRgba(color, 0.42),
-                          backgroundColor:
-                            appointment.status === AppointmentStatus.CONFIRMED
-                              ? hexToRgba(color, 0.16)
-                              : "rgba(251, 191, 36, 0.18)",
-                          minHeight: ROW_HEIGHT - 8,
+                          borderColor: hexToRgba(color, 0.4),
+                          backgroundColor: hexToRgba(color, 0.14),
                         }}
                       >
                         <div
-                          className="absolute inset-y-0 left-0 w-1 rounded-l-2xl"
+                          className="absolute inset-y-0 left-0 w-1"
                           style={{ backgroundColor: color }}
                         />
-                        <div className="ml-2 flex h-full items-start justify-between gap-3">
+                        <div className="flex items-start justify-between gap-2 pl-1">
                           <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-foreground">
                               {appointment.patient.firstName} {appointment.patient.lastName}
                             </p>
-                            <p className="text-xs text-muted-foreground">
-                              {appointment.startTime} - {appointment.endTime}
-                            </p>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {appointment.duration} min
+                            <p className="truncate text-xs text-muted-foreground tabular-nums">
+                              {appointment.startTime} – {appointment.endTime}
+                              {attended ? " · Atendida" : ""}
                             </p>
                           </div>
-                          {canDragAppointment(appointment, currentUser) ? (
+                          {draggable ? (
                             <GripVertical className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                           ) : null}
                         </div>
@@ -634,67 +584,93 @@ export function AppointmentsCalendarBoard({ currentUser, staffMembers }: Props) 
         </CardContent>
       </Card>
 
-      <div className="space-y-6">
-        <Card className="border-border/70 bg-white/90 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Por coordinar</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {unscheduledAppointments.length ? (
-              unscheduledAppointments.map((appointment) => (
-                <div
-                  key={appointment.id}
-                  className="rounded-2xl border border-amber-200 bg-amber-50 p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {appointment.patient.firstName} {appointment.patient.lastName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {appointment.patient.document}
-                      </p>
+      {!lockedStaffId ? (
+        <div className="space-y-6">
+          <Card className="border-border/70 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Por coordinar</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {unscheduledAppointments.length ? (
+                unscheduledAppointments.map((appointment) => (
+                  <div
+                    key={appointment.id}
+                    className="rounded-xl border border-amber-200 bg-amber-50 p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-foreground">
+                          {appointment.patient.firstName} {appointment.patient.lastName}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {appointment.staff?.user
+                            ? `${appointment.staff.user.firstName} ${appointment.staff.user.lastName}`
+                            : "Sin especialista"}
+                        </p>
+                      </div>
+                      <Badge variant="outline">{getStatusLabel(appointment.status)}</Badge>
                     </div>
-                    <Badge variant="outline">{getStatusLabel(appointment.status)}</Badge>
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {appointment.staff?.user
-                      ? `${appointment.staff.user.firstName} ${appointment.staff.user.lastName}`
-                      : "Sin especialista"}
-                  </p>
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    Esta cita aún no tiene bloque horario confirmado. Primero asígnale hora y duración desde la gestión normal.
-                  </p>
-                </div>
-              ))
-            ) : (
-              <div className="rounded-2xl border border-dashed px-4 py-6 text-sm text-muted-foreground">
-                No hay citas pendientes de coordinar para esta fecha.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                ))
+              ) : (
+                <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
+                  Nada pendiente para este día.
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card className="border-border/70 bg-white/90 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Reglas de movimiento</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <div className="flex gap-2">
-              <CalendarClock className="mt-0.5 size-4 shrink-0 text-rose-600" />
-              <p>Solo se pueden arrastrar citas con hora, duración y turno asignado.</p>
-            </div>
-            <div className="flex gap-2">
-              <MoveRight className="mt-0.5 size-4 shrink-0 text-rose-600" />
-              <p>En vista Todos, la cita se mueve dentro de la columna de su mismo especialista.</p>
-            </div>
-            <div className="flex gap-2">
-              <GripVertical className="mt-0.5 size-4 shrink-0 text-rose-600" />
-              <p>Si el horario se cruza con otra cita confirmada, el backend rechazará el movimiento.</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="border-border/70 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Cómo usar el calendario</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <div className="flex gap-2">
+                <MousePointerClick className="mt-0.5 size-4 shrink-0 text-primary" />
+                <p>Doble clic en un espacio libre para agendar una cita a esa hora.</p>
+              </div>
+              <div className="flex gap-2">
+                <GripVertical className="mt-0.5 size-4 shrink-0 text-primary" />
+                <p>Arrastra una cita a otro espacio libre del mismo especialista para moverla.</p>
+              </div>
+              <div className="flex gap-2">
+                <MoveRight className="mt-0.5 size-4 shrink-0 text-primary" />
+                <p>
+                  Atención de {CLINIC_OPENING_TIME} a {CLINIC_CLOSING_TIME}. Los espacios grises ya
+                  pasaron.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+
+      <Dialog
+        open={newAppointment !== null}
+        onOpenChange={(open) => !open && setNewAppointment(null)}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Nueva cita</DialogTitle>
+            <DialogDescription>
+              Ya elegimos el especialista, la fecha y la hora. Solo falta el paciente.
+            </DialogDescription>
+          </DialogHeader>
+          {newAppointment ? (
+            <AppointmentForm
+              key={`${newAppointment.staffId}-${newAppointment.date}-${newAppointment.startTime}`}
+              patients={patients}
+              staffMembers={staffMembers}
+              defaults={newAppointment}
+              onCancel={() => setNewAppointment(null)}
+              onSuccess={() => {
+                setNewAppointment(null);
+                void loadAppointments();
+              }}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

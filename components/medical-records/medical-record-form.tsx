@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { unwrapAction } from "@/lib/action-result";
 import { showFormErrors } from "@/lib/form-notifications";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -209,10 +210,10 @@ export function MedicalRecordForm({
       };
 
       if (record) {
-        await updateMedicalRecordAction(record.id, payload);
+        unwrapAction(await updateMedicalRecordAction(record.id, payload));
         toast.success("Historia clínica actualizada.");
       } else {
-        await createMedicalRecordAction(payload);
+        unwrapAction(await createMedicalRecordAction(payload));
         toast.success("Historia clínica registrada.");
       }
       onSuccess?.();

@@ -5,6 +5,7 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
+import { unwrapAction } from "@/lib/action-result";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -79,10 +80,10 @@ export function CashEntryForm({ entry, onSuccess }: Props) {
         referenceNumber: values.referenceNumber || undefined,
       };
       if (entry) {
-        await updateCashEntryAction(entry.id, payload);
+        unwrapAction(await updateCashEntryAction(entry.id, payload));
         toast.success("Movimiento actualizado");
       } else {
-        await createCashEntryAction(payload);
+        unwrapAction(await createCashEntryAction(payload));
         toast.success("Movimiento registrado");
       }
       onSuccess?.();

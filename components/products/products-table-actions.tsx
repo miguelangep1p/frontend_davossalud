@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Eye, MoreHorizontal, PenIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { unwrapAction } from "@/lib/action-result";
 import { Product } from "@/types/product";
 import { deleteProductAction } from "@/lib/actions/product.actions";
 import { Button } from "@/components/ui/button";
@@ -46,7 +47,7 @@ export function ProductsTableActions({ product }: ProductsTableActionsProps) {
   async function handleDelete() {
     setIsLoading(true);
     try {
-      await deleteProductAction(product.id);
+      unwrapAction(await deleteProductAction(product.id));
       toast.success("Producto eliminado correctamente");
       setDeleteOpen(false);
     } catch (error: any) {

@@ -5,6 +5,7 @@ import { MoreHorizontal, UserRoundPenIcon, Trash2, Eye } from "lucide-react";
 import { User } from "@/types/user";
 import { deleteUserAction } from "@/lib/actions/user.actions";
 import { toast } from "sonner";
+import { unwrapAction } from "@/lib/action-result";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -50,7 +51,7 @@ export function UserTableActions({ user }: UserRowActionsProps) {
   async function handleDelete() {
     setIsLoading(true);
     try {
-      await deleteUserAction(user.id);
+      unwrapAction(await deleteUserAction(user.id));
       toast.success("Usuario eliminado correctamente");
       setDeleteOpen(false);
     } catch (err: any) {

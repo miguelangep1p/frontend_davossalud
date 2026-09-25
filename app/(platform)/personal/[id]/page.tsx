@@ -3,13 +3,16 @@ import { redirect } from "next/navigation";
 import { IdCard, Mail, MapPin, MoveLeft, Phone } from "lucide-react";
 import { PageErrorState } from "@/components/layout/page-error-state";
 import { PageHeader } from "@/components/layout/page-header";
-import { ScheduleSection } from "@/components/schedules/schedule-section";
+import { AppointmentsCalendarBoard } from "@/components/appointments/appointments-calendar-board";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoItem } from "@/components/ui/info-item";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getSession } from "@/lib/actions/auth.actions";
+import { getUserProfileAction } from "@/lib/actions/user.actions";
+import { getPatientsList } from "@/lib/services/patient";
 import { getStaffById } from "@/lib/services/staff";
+import { Patient } from "@/types/patient";
 import { Staff } from "@/types/staff";
 import { Role } from "@/types/user";
 
@@ -30,10 +33,15 @@ export default async function PersonalProfilePage({
   }
 
   let staff: Staff | null = null;
+  let patients: Patient[] = [];
   let errorMessage: string | null = null;
 
+  const currentUser = await getUserProfileAction();
   try {
-    staff = await getStaffById(id, token);
+    [staff, patients] = await Promise.all([
+      getStaffById(id, token),
+      getPatientsList(token),
+    ]);
   } catch (error: unknown) {
     if (error instanceof Error && error.message === "UNAUTHORIZED") {
       redirect("/login");
@@ -50,7 +58,7 @@ export default async function PersonalProfilePage({
       <div className="flex flex-col gap-6 p-6">
         <PageHeader
           title="Perfil del personal"
-          description="Resumen del especialista, sus datos de contacto y sus horarios."
+          description="Datos del especialista y su agenda de citas."
           action={
             <Button asChild variant="outline">
               <Link href="/personal">
@@ -77,7 +85,7 @@ export default async function PersonalProfilePage({
     <div className="flex flex-col gap-6 p-6">
       <PageHeader
         title="Perfil del personal"
-        description="Resumen del especialista, sus datos de contacto y sus horarios."
+        description="Datos del especialista y su agenda de citas."
         action={
           <Button asChild variant="outline">
             <Link href="/personal">
@@ -146,8 +154,14 @@ export default async function PersonalProfilePage({
         </div>
       </section>
 
-      <section className="rounded-2xl border bg-card p-6">
-        <ScheduleSection staffId={staff.id} />
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Agenda de citas</h2>
+        <AppointmentsCalendarBoard
+          currentUser={currentUser}
+          staffMembers={[staff]}
+          patients={patients}
+          lockedStaffId={staff.id}
+        />
       </section>
     </div>
   );

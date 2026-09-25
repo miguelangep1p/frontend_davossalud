@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { runAction } from "@/lib/action-result";
 import { getPatientById, createPatient, updatePatient, deletePatient } from "@/lib/services/patient";
 import { getSession } from "@/lib/actions/auth.actions";
 import { CreatePatientDto, UpdatePatientDto } from "@/types/patient";
@@ -19,28 +20,34 @@ export async function getPatientByIdAction(id: string) {
 }
 
 export async function createPatientAction(data: CreatePatientDto) {
-  const token = await getSession();
-  if (!token) throw new Error("UNAUTHORIZED");
+  return runAction(async () => {
+    const token = await getSession();
+    if (!token) throw new Error("UNAUTHORIZED");
 
-  const newPatient = await createPatient(data, token);
-  revalidatePath("/pacientes");
-  return newPatient;
+    const newPatient = await createPatient(data, token);
+    revalidatePath("/pacientes");
+    return newPatient;
+  }, "No se pudo registrar el paciente.");
 }
 
 export async function updatePatientAction(id: string, data: UpdatePatientDto) {
-  const token = await getSession();
-  if (!token) throw new Error("UNAUTHORIZED");
+  return runAction(async () => {
+    const token = await getSession();
+    if (!token) throw new Error("UNAUTHORIZED");
 
-  const updatedPatient = await updatePatient(id, data, token);
-  revalidatePath("/pacientes");
-  revalidatePath(`/pacientes/${id}`);
-  return updatedPatient;
+    const updatedPatient = await updatePatient(id, data, token);
+    revalidatePath("/pacientes");
+    revalidatePath(`/pacientes/${id}`);
+    return updatedPatient;
+  }, "No se pudo actualizar el paciente.");
 }
 
 export async function deletePatientAction(id: string) {
-  const token = await getSession();
-  if (!token) throw new Error("UNAUTHORIZED");
+  return runAction(async () => {
+    const token = await getSession();
+    if (!token) throw new Error("UNAUTHORIZED");
 
-  await deletePatient(id, token);
-  revalidatePath("/pacientes");
+    await deletePatient(id, token);
+    revalidatePath("/pacientes");
+  }, "No se pudo eliminar el paciente.");
 }

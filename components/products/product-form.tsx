@@ -5,6 +5,7 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
+import { unwrapAction } from "@/lib/action-result";
 import { showFormErrors } from "@/lib/form-notifications";
 
 import { Button } from "@/components/ui/button";
@@ -71,10 +72,10 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
       };
 
       if (product) {
-        await updateProductAction(product.id, payload);
+        unwrapAction(await updateProductAction(product.id, payload));
         toast.success("Producto actualizado correctamente");
       } else {
-        await createProductAction(payload);
+        unwrapAction(await createProductAction(payload));
         toast.success("Producto registrado correctamente");
       }
 

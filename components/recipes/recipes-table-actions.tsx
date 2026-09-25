@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Download, Eye, MessageCircle, MoreHorizontal, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { unwrapAction } from "@/lib/action-result";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -62,7 +63,7 @@ export function RecipesTableActions({ recipe }: RecipesTableActionsProps) {
   async function handleDelete() {
     setIsLoading(true);
     try {
-      await deleteRecipeAction(recipe.id);
+      unwrapAction(await deleteRecipeAction(recipe.id));
       toast.success("Receta eliminada correctamente");
       setDeleteOpen(false);
     } catch (error: any) {

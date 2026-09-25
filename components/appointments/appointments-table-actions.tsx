@@ -51,9 +51,10 @@ export function AppointmentsTableActions({
     setError(null);
 
     try {
-      await updateAppointmentStatusAction(appointment.id, {
+      const result = await updateAppointmentStatusAction(appointment.id, {
         status: AppointmentStatus.CANCELLED,
       });
+      if (!result.success) throw new Error(result.error);
       toast.success("Cita cancelada correctamente");
       setCancelOpen(false);
     } catch (err: unknown) {

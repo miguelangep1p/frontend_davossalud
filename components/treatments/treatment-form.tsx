@@ -5,6 +5,7 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
+import { unwrapAction } from "@/lib/action-result";
 import { showFormErrors } from "@/lib/form-notifications";
 
 import { Button } from "@/components/ui/button";
@@ -70,10 +71,10 @@ export function TreatmentForm({ treatment, onSuccess }: TreatmentFormProps) {
       };
 
       if (treatment) {
-        await updateTreatmentAction(treatment.id, payload);
+        unwrapAction(await updateTreatmentAction(treatment.id, payload));
         toast.success("Tratamiento actualizado correctamente");
       } else {
-        await createTreatmentAction(payload);
+        unwrapAction(await createTreatmentAction(payload));
         toast.success("Tratamiento registrado correctamente");
       }
 

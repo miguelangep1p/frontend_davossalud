@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Eye, MoreHorizontal, PenIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { unwrapAction } from "@/lib/action-result";
 import { Treatment } from "@/types/treatment";
 import { deleteTreatmentAction } from "@/lib/actions/treatment.actions";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,7 @@ export function TreatmentsTableActions({
   async function handleDelete() {
     setIsLoading(true);
     try {
-      await deleteTreatmentAction(treatment.id);
+      unwrapAction(await deleteTreatmentAction(treatment.id));
       toast.success("Tratamiento eliminado correctamente");
       setDeleteOpen(false);
     } catch (error: any) {

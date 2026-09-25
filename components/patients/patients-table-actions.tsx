@@ -40,6 +40,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { PatientForm } from "./patient-form";
 import { toast } from "sonner";
+import { unwrapAction } from "@/lib/action-result";
 
 interface PatientsTableActionsProps {
   patient: Patient;
@@ -69,7 +70,7 @@ export function PatientsTableActions({ patient }: PatientsTableActionsProps) {
     setError(null);
 
     try {
-      await deletePatientAction(patient.id);
+      unwrapAction(await deletePatientAction(patient.id));
       toast.success("Paciente eliminado correctamente");
       setDeleteOpen(false);
     } catch (err: any) {

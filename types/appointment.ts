@@ -32,21 +32,18 @@ export interface CreateAppointmentDto {
   patientId: string;
   staffId: string;
   date: string;
-  scheduleId?: string;
   startTime?: string;
   duration?: number;
 }
 
 export interface UpdateAppointmentStatusDto {
   status: AppointmentStatus;
-  scheduleId?: string;
   startTime?: string;
   duration?: number;
 }
 
 export interface RescheduleAppointmentDto {
   date: string;
-  scheduleId?: string;
   startTime?: string;
   duration?: number;
 }

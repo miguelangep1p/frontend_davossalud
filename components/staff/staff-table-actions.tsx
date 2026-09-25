@@ -45,6 +45,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { unwrapAction } from "@/lib/action-result";
 
 interface StaffRowActionsProps {
   staff: Staff;
@@ -65,7 +66,7 @@ export function StaffTableActions({ staff }: StaffRowActionsProps) {
     setIsLoading(true);
     setError(null);
     try {
-      await deleteStaffAction(staff.id);
+      unwrapAction(await deleteStaffAction(staff.id));
       toast.success("Personal eliminado correctamente");
       setDeleteOpen(false);
     } catch (err: unknown) {
@@ -102,7 +103,7 @@ export function StaffTableActions({ staff }: StaffRowActionsProps) {
     };
 
     try {
-      await updateStaffAction(staff.id, dataToUpdate);
+      unwrapAction(await updateStaffAction(staff.id, dataToUpdate));
       toast.success("Personal actualizado correctamente");
       setEditOpen(false);
     } catch (err: unknown) {

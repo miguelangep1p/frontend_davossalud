@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { unwrapAction } from "@/lib/action-result";
 import { Patient } from "@/types/patient";
 import { Staff } from "@/types/staff";
 import { Role } from "@/types/user";
@@ -94,14 +95,14 @@ export function RecipeForm({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      await createRecipeAction({
+      unwrapAction(await createRecipeAction({
         ...values,
         notes: values.notes || undefined,
         items: values.items.map((item) => ({
           ...item,
           instructions: item.instructions || undefined,
         })),
-      });
+      }));
       toast.success("Receta registrada correctamente");
       onSuccess?.();
       form.reset({

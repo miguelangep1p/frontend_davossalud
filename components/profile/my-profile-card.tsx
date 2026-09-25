@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { unwrapAction } from "@/lib/action-result";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -32,12 +33,12 @@ export function MyProfileCard({ user }: Props) {
 
     setIsSaving(true);
     try {
-      await updateStaffAction(user.staff.id, {
+      unwrapAction(await updateStaffAction(user.staff.id, {
         profilePhoto: profilePhoto || undefined,
         phone: phone || undefined,
         address: address || undefined,
         specialty: specialty || undefined,
-      });
+      }));
       toast.success("Perfil actualizado correctamente");
       router.refresh();
     } catch (error: unknown) {

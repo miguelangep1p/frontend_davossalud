@@ -5,6 +5,7 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
+import { unwrapAction } from "@/lib/action-result";
 import { AlertTriangle } from "lucide-react";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { Button } from "@/components/ui/button";
@@ -84,10 +85,10 @@ export function PatientForm({ patient, onSuccess }: PatientFormProps) {
       };
 
       if (patient) {
-        await updatePatientAction(patient.id, payload);
+        unwrapAction(await updatePatientAction(patient.id, payload));
         toast.success("Paciente actualizado correctamente");
       } else {
-        await createPatientAction(payload);
+        unwrapAction(await createPatientAction(payload));
         toast.success("Paciente registrado correctamente");
       }
 
