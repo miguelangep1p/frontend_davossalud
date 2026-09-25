@@ -1,39 +1,23 @@
 import { redirect } from "next/navigation";
 import {
   CalendarCheck,
-  Clock,
   Stethoscope,
   TrendingUp,
   Users,
 } from "lucide-react";
+import { AppointmentsCalendarBoard } from "@/components/appointments/appointments-calendar-board";
 import { PageErrorState } from "@/components/layout/page-error-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSession } from "@/lib/actions/auth.actions";
+import { getUserProfileAction } from "@/lib/actions/user.actions";
 import { DashboardStats, getDashboardStats } from "@/lib/services/dashboard";
+import { getStaffList } from "@/lib/services/staff";
+import { Staff } from "@/types/staff";
 
 export const metadata = {
   title: "Dashboard | Davos Salud",
   description: "Panel de control del sistema de gestión clínica",
-};
-
-const APPOINTMENT_STATUS_LABELS: Record<string, string> = {
-  PENDING_CONFIRMATION: "Por confirmar",
-  CONFIRMED: "Confirmada",
-  COMPLETED: "Completada",
-  CANCELLED: "Cancelada",
-  NO_SHOW: "No asistió",
-};
-
-const APPOINTMENT_STATUS_STYLES: Record<string, string> = {
-  COMPLETED:
-    "bg-fuchsia-100 text-fuchsia-700 ring-1 ring-fuchsia-200 dark:bg-fuchsia-950/40 dark:text-fuchsia-300 dark:ring-fuchsia-900",
-  CANCELLED:
-    "bg-rose-100 text-rose-700 ring-1 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900",
-  CONFIRMED:
-    "bg-violet-100 text-violet-700 ring-1 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900",
-  DEFAULT:
-    "bg-amber-100 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900",
 };
 
 export default async function DashboardPage() {
@@ -53,10 +37,15 @@ export default async function DashboardPage() {
     upcomingToday: [],
     last7Days: [],
   };
+  let staffMembers: Staff[] = [];
   let errorMessage: string | null = null;
 
+  const currentUser = await getUserProfileAction();
   try {
-    stats = await getDashboardStats(token);
+    [stats, staffMembers] = await Promise.all([
+      getDashboardStats(token),
+      getStaffList(token),
+    ]);
   } catch (error: unknown) {
     if (error instanceof Error && error.message === "UNAUTHORIZED") {
       redirect("/login");
@@ -166,62 +155,16 @@ export default async function DashboardPage() {
             ))}
           </section>
 
-          <section className="overflow-hidden rounded-2xl border border-border/60 bg-card/95 shadow-sm">
-            <div className="flex items-center gap-2 border-b px-6 py-4">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-base font-semibold text-foreground">
-                Citas de hoy
-              </h2>
-              <span className="ml-auto text-xs text-muted-foreground">
-                {stats.upcomingToday.length} cita
-                {stats.upcomingToday.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-
-            {stats.upcomingToday.length > 0 ? (
-              <div className="divide-y">
-                {stats.upcomingToday.map((appointment) => {
-                  const statusClass =
-                    APPOINTMENT_STATUS_STYLES[appointment.status] ??
-                    APPOINTMENT_STATUS_STYLES.DEFAULT;
-
-                  return (
-                    <div
-                      key={appointment.id}
-                      className="flex items-center gap-4 px-6 py-3 transition-colors hover:bg-muted/30"
-                    >
-                      <div className="min-w-[64px] text-sm font-medium text-muted-foreground">
-                        {appointment.startTime || "--"}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-foreground">
-                          {appointment.patient.firstName}{" "}
-                          {appointment.patient.lastName}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {appointment.staff?.user
-                            ? `Dr. ${appointment.staff.user.firstName} ${appointment.staff.user.lastName}`
-                            : "Especialista por asignar"}
-                          {appointment.staff?.specialty
-                            ? ` · ${appointment.staff.specialty}`
-                            : ""}
-                        </p>
-                      </div>
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}`}
-                      >
-                        {APPOINTMENT_STATUS_LABELS[appointment.status] ??
-                          appointment.status}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
-                No hay citas programadas para hoy.
-              </div>
-            )}
+          <section className="space-y-3">
+            <h2 className="text-base font-semibold text-foreground">
+              Agenda de citas
+            </h2>
+            <AppointmentsCalendarBoard
+              currentUser={currentUser}
+              staffMembers={staffMembers}
+              patients={[]}
+              readOnly
+            />
           </section>
 
           <section className="overflow-hidden rounded-2xl border border-border/60 bg-card/95 shadow-sm">

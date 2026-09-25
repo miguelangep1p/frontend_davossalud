@@ -2,12 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import {
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Clock,
+  Eye,
   GripVertical,
   Loader2,
   MousePointerClick,
   MoveRight,
+  Stethoscope,
+  UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -53,6 +58,13 @@ import {
 
 const ROW_HEIGHT = 44;
 const ALL_STAFF_VALUE = "__ALL__";
+const ALL_STATUS_VALUE = "__ALL__";
+const STATUS_FILTERS = [
+  { value: ALL_STATUS_VALUE, label: "Todos los estados" },
+  { value: AppointmentStatus.CONFIRMED, label: "Confirmadas" },
+  { value: AppointmentStatus.ATTENDED, label: "Atendidas" },
+  { value: AppointmentStatus.CANCELLED, label: "Canceladas" },
+];
 const FALLBACK_COLORS = [
   "#F472B6",
   "#60A5FA",
@@ -154,6 +166,8 @@ interface Props {
   patients: Patient[];
   /** Show a single professional's agenda without the specialist picker. */
   lockedStaffId?: string;
+  /** View and filter only: no double-click booking and no drag to reschedule. */
+  readOnly?: boolean;
 }
 
 export function AppointmentsCalendarBoard({
@@ -161,6 +175,7 @@ export function AppointmentsCalendarBoard({
   staffMembers,
   patients,
   lockedStaffId,
+  readOnly = false,
 }: Props) {
   const doctors = useMemo(() => {
     const staffWithDoctorRole = staffMembers.filter((staff) =>
@@ -177,7 +192,7 @@ export function AppointmentsCalendarBoard({
       !currentUser.roles.includes(Role.ADMIN) &&
       !currentUser.roles.includes(Role.RECEPTIONIST),
   );
-  const canCreate = canManageAppointments(currentUser);
+  const canCreate = !readOnly && canManageAppointments(currentUser);
 
   const [selectedDate, setSelectedDate] = useState(todayISO);
   const [pickedStaffId, setSelectedStaffId] = useState(ALL_STAFF_VALUE);
@@ -192,6 +207,8 @@ export function AppointmentsCalendarBoard({
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [draggingAppointmentId, setDraggingAppointmentId] = useState<string | null>(null);
   const [newAppointment, setNewAppointment] = useState<AppointmentFormDefaults | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>(ALL_STATUS_VALUE);
+  const [viewingAppointment, setViewingAppointment] = useState<Appointment | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const visibleStaffMembers = useMemo(() => {
@@ -255,14 +272,15 @@ export function AppointmentsCalendarBoard({
 
   const scheduledAppointments = useMemo(
     () =>
-      filteredAppointments.filter(
-        (appointment) =>
-          appointment.startTime &&
-          appointment.duration &&
-          appointment.status !== AppointmentStatus.RESCHEDULED &&
-          appointment.status !== AppointmentStatus.CANCELLED,
-      ),
-    [filteredAppointments],
+      filteredAppointments.filter((appointment) => {
+        if (!appointment.startTime || !appointment.duration) return false;
+        if (appointment.status === AppointmentStatus.RESCHEDULED) return false;
+        if (statusFilter === ALL_STATUS_VALUE) {
+          return appointment.status !== AppointmentStatus.CANCELLED;
+        }
+        return appointment.status === statusFilter;
+      }),
+    [filteredAppointments, statusFilter],
   );
 
   const unscheduledAppointments = useMemo(
@@ -431,14 +449,38 @@ export function AppointmentsCalendarBoard({
                   </SelectContent>
                 </Select>
               ) : null}
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger aria-label="Estado" className="sm:w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_FILTERS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          {canCreate ? (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <MousePointerClick className="size-3.5" />
-              Doble clic en un espacio libre para agendar · arrastra una cita para moverla
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+            <p className="flex items-center gap-1.5">
+              {canCreate ? (
+                <>
+                  <MousePointerClick className="size-3.5" />
+                  Doble clic en un espacio libre para agendar · arrastra una cita para moverla
+                </>
+              ) : (
+                <>
+                  <Eye className="size-3.5" />
+                  Solo lectura · haz clic en una cita para ver el detalle
+                </>
+              )}
             </p>
-          ) : null}
+            <span className="font-medium">
+              {scheduledAppointments.length} cita{scheduledAppointments.length !== 1 ? "s" : ""}
+            </span>
+          </div>
         </CardHeader>
 
         <CardContent className="p-0">
@@ -539,8 +581,9 @@ export function AppointmentsCalendarBoard({
 
                     const color = getStaffColor(appointment.staffId);
                     const blockSpan = Math.max(Math.ceil(appointment.duration / SLOT_MINUTES), 1);
-                    const draggable = canDragAppointment(appointment, currentUser);
+                    const draggable = !readOnly && canDragAppointment(appointment, currentUser);
                     const attended = appointment.status === AppointmentStatus.ATTENDED;
+                    const cancelled = appointment.status === AppointmentStatus.CANCELLED;
 
                     return (
                       <div
@@ -549,11 +592,12 @@ export function AppointmentsCalendarBoard({
                         onDragStart={() => setDraggingAppointmentId(appointment.id)}
                         onDragEnd={() => setDraggingAppointmentId(null)}
                         onDoubleClick={(event) => event.stopPropagation()}
+                        onClick={() => setViewingAppointment(appointment)}
                         className={cn(
-                          "relative z-10 m-0.5 overflow-hidden rounded-lg border px-2.5 py-1.5 shadow-xs transition-opacity",
-                          draggable ? "cursor-grab active:cursor-grabbing" : "cursor-default",
+                          "relative z-10 m-0.5 overflow-hidden rounded-lg border px-2.5 py-1.5 shadow-xs transition-[opacity,box-shadow] hover:shadow-md",
+                          draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
                           draggingAppointmentId === appointment.id && "opacity-50",
-                          attended && "opacity-70",
+                          (attended || cancelled) && "opacity-70",
                         )}
                         style={{
                           gridColumn: staffIndex + 2,
@@ -568,12 +612,17 @@ export function AppointmentsCalendarBoard({
                         />
                         <div className="flex items-start justify-between gap-2 pl-1">
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-foreground">
+                            <p
+                              className={cn(
+                                "truncate text-sm font-semibold text-foreground",
+                                cancelled && "line-through",
+                              )}
+                            >
                               {appointment.patient.firstName} {appointment.patient.lastName}
                             </p>
                             <p className="truncate text-xs text-muted-foreground tabular-nums">
                               {appointment.startTime} – {appointment.endTime}
-                              {attended ? " · Atendida" : ""}
+                              {attended || cancelled ? ` · ${getStatusLabel(appointment.status)}` : ""}
                             </p>
                           </div>
                           {draggable ? (
@@ -626,6 +675,7 @@ export function AppointmentsCalendarBoard({
             </CardContent>
           </Card>
 
+          {!readOnly ? (
           <Card className="border-border/70 shadow-sm">
             <CardHeader>
               <CardTitle className="text-base">Cómo usar el calendario</CardTitle>
@@ -648,8 +698,50 @@ export function AppointmentsCalendarBoard({
               </div>
             </CardContent>
           </Card>
+          ) : null}
         </div>
       ) : null}
+
+      <Dialog
+        open={viewingAppointment !== null}
+        onOpenChange={(open) => !open && setViewingAppointment(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          {viewingAppointment ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  {viewingAppointment.patient.firstName} {viewingAppointment.patient.lastName}
+                </DialogTitle>
+                <DialogDescription>
+                  Documento {viewingAppointment.patient.document}
+                </DialogDescription>
+              </DialogHeader>
+              <dl className="grid gap-3 text-sm">
+                <DetailRow icon={Stethoscope} label="Especialista">
+                  {viewingAppointment.staff?.user
+                    ? `${viewingAppointment.staff.user.firstName} ${viewingAppointment.staff.user.lastName}`
+                    : "Sin asignar"}
+                  {viewingAppointment.staff?.specialty
+                    ? ` · ${viewingAppointment.staff.specialty}`
+                    : ""}
+                </DetailRow>
+                <DetailRow icon={CalendarDays} label="Fecha">
+                  <span className="capitalize">{formatDayTitle(viewingAppointment.date)}</span>
+                </DetailRow>
+                <DetailRow icon={Clock} label="Horario">
+                  {viewingAppointment.startTime
+                    ? `${viewingAppointment.startTime} – ${viewingAppointment.endTime} (${viewingAppointment.duration} min)`
+                    : "Por coordinar"}
+                </DetailRow>
+                <DetailRow icon={UserRound} label="Estado">
+                  <Badge variant="outline">{getStatusLabel(viewingAppointment.status)}</Badge>
+                </DetailRow>
+              </dl>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={newAppointment !== null}
@@ -677,6 +769,26 @@ export function AppointmentsCalendarBoard({
           ) : null}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function DetailRow({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-lg bg-muted/40 px-3 py-2.5">
+      <Icon className="mt-0.5 size-4 shrink-0 text-primary" />
+      <div className="min-w-0">
+        <dt className="text-xs text-muted-foreground">{label}</dt>
+        <dd className="font-medium">{children}</dd>
+      </div>
     </div>
   );
 }
